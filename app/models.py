@@ -3,17 +3,28 @@ from app import db
 class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), unique=True)
-    phone = db.Column(db.String(120), unique=True)
+    name = db.Column(db.String(80), nullable=False)
+    phone = db.Column(db.String(15), unique=True)
     password = db.Column(db.String(120), unique=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    preference = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(60), unique=True)
+    preferences = db.relationship('Preferences', backref='user', lazy=True)
+    def __repr__(self):
+        return f"<User {self.name}>"
+    
+
+class Preferences(db.Model):
+    __tablename__ = 'preferences'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    preference = db.Column(db.String(120), nullable=False)
     is_lactose_intolerant = db.Column(db.Boolean, default=False)
     is_halal = db.Column(db.Boolean, default=False)
     is_vegan = db.Column(db.Boolean, default=False)
     is_vegetarian = db.Column(db.Boolean, default=False)
     is_allergic_to_gluten = db.Column(db.Boolean, default=False)
     is_jain = db.Column(db.Boolean, default=False)
+    def __repr__(self):
+        return f"<User {self.name}>"
 
 class Restaurant(db.Model):
     __tablename__ = 'restaurant'
@@ -23,19 +34,30 @@ class Restaurant(db.Model):
     phone = db.Column(db.String(12), unique=True, nullable=False)
     email = db.Column(db.String(40), unique=True, nullable=False)
     cuisine = db.Column(db.String(50), nullable=False)
-    rating = db.Column(db.Integer)
+    rating = db.Column(db.Float)
     is_vegan = db.Column(db.Boolean, default=False)
     is_vegetarian = db.Column(db.Boolean, default=False)
     is_halal = db.Column(db.Boolean, default=False)
     description = db.Column(db.String(200))
     menus = db.relationship('Menu', backref='restaurant', lazy=True)
+    def __repr__(self):
+        return f"<User {self.name}>"
 
 class Menu(db.Model):
     __tablename__ = 'menu'
     id = db.Column(db.Integer, primary_key=True)
-    menu_type = db.Column(db.String(10), nullable=False)
+    menu_type = db.Column(db.String(20), nullable=False)
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
     dishes = db.relationship('Dish', backref='menu', lazy=True)
+    def __repr__(self):
+        return f"<User {self.name}>"
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "menu_type": self.menu_type,
+            "restaurant_id": self.restaurant_id,
+            "dishes": [dish.to_dict() for dish in self.dishes]
+        }
 
 class Dish(db.Model):
     __tablename__ = 'dish'
@@ -45,11 +67,11 @@ class Dish(db.Model):
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
     menu_id = db.Column(db.Integer, db.ForeignKey('menu.id'), nullable=False)
     description = db.Column(db.String(200))
-    price = db.Column(db.Float, nullable=False)
-    protein = db.Column(db.Float, nullable=False)
-    fat = db.Column(db.Float, nullable=False)
-    energy = db.Column(db.Float, nullable=False)
-    carbs = db.Column(db.Float, nullable=False) 
+    price = db.Column(db.Float)
+    protein = db.Column(db.Float)
+    fat = db.Column(db.Float)
+    energy = db.Column(db.Float)
+    carbs = db.Column(db.Float) 
     is_lactose_free = db.Column(db.Boolean, default=True)
     is_halal = db.Column(db.Boolean, default=True)
     is_vegan = db.Column(db.Boolean, default=True)
@@ -58,4 +80,39 @@ class Dish(db.Model):
     is_jain = db.Column(db.Boolean, default=True)
     is_soy_free = db.Column(db.Boolean, default=True)
     is_available = db.Column(db.Boolean, default=True)
-    #image
+    image = db.Column(db.String(100))
+    def __repr__(self):
+        return f"<User {self.name}>"
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "dish_name": self.dish_name,
+            "general_description": self.general_description,
+            "price": self.price,
+            "protein": self.protein,
+            "fat": self.fat,
+            "energy": self.energy,
+            "carbs": self.carbs,
+            "is_lactose_free": self.is_lactose_free,
+            "is_halal": self.is_halal,
+            "is_vegan": self.is_vegan,
+            "is_vegetarian": self.is_vegetarian,
+            "is_gluten_free": self.is_gluten_free,
+            "is_jain": self.is_jain,
+            "is_soy_free": self.is_soy_free,
+            "is_available": self.is_available,
+            "image": self.image
+        }
+
+class Theme(db.Model):
+    __tablename__ = 'theme'
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    bgcolor = db.Column(db.String(50), nullable=False)
+    accentcolor1 = db.Column(db.String(50), nullable=False)
+    accentcolor2 = db.Column(db.String(50), nullable=False)
+    logo1 = db.Column(db.String(100), nullable=False)
+    logo2 = db.Column(db.String(100))
+    def __repr__(self):
+        return f"<User {self.name}>"
+    
