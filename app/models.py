@@ -1,5 +1,7 @@
 from app import db
 
+
+
 class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
@@ -8,9 +10,10 @@ class User(db.Model):
     password = db.Column(db.String(120), unique=True)
     email = db.Column(db.String(60), unique=True)
     preferences = db.relationship('Preferences', backref='user', lazy=True)
+
     def __repr__(self):
-        return f"<User {self.name}>"
-    
+        return f"<User(id={self.id}, name='{self.name}', email='{self.email}', phone='{self.phone}')>"
+
 
 class Preferences(db.Model):
     __tablename__ = 'preferences'
@@ -23,8 +26,13 @@ class Preferences(db.Model):
     is_vegetarian = db.Column(db.Boolean, default=False)
     is_allergic_to_gluten = db.Column(db.Boolean, default=False)
     is_jain = db.Column(db.Boolean, default=False)
+
     def __repr__(self):
-        return f"<User {self.name}>"
+        return (f"<Preferences(id={self.id}, user_id={self.user_id}, preference='{self.preference}', "
+                f"is_lactose_intolerant={self.is_lactose_intolerant}, is_halal={self.is_halal}, "
+                f"is_vegan={self.is_vegan}, is_vegetarian={self.is_vegetarian}, "
+                f"is_allergic_to_gluten={self.is_allergic_to_gluten}, is_jain={self.is_jain})>")
+
 
 class Restaurant(db.Model):
     __tablename__ = 'restaurant'
@@ -40,8 +48,12 @@ class Restaurant(db.Model):
     is_halal = db.Column(db.Boolean, default=False)
     description = db.Column(db.String(200))
     menus = db.relationship('Menu', backref='restaurant', lazy=True)
+
     def __repr__(self):
-        return f"<User {self.name}>"
+        return (f"<Restaurant(id={self.id}, name='{self.name}', cuisine='{self.cuisine}', "
+                f"address='{self.address}', phone='{self.phone}', email='{self.email}', "
+                f"rating={self.rating})>")
+
 
 class Menu(db.Model):
     __tablename__ = 'menu'
@@ -49,8 +61,10 @@ class Menu(db.Model):
     menu_type = db.Column(db.String(20), nullable=False)
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
     dishes = db.relationship('Dish', backref='menu', lazy=True)
+
     def __repr__(self):
-        return f"<User {self.name}>"
+        return f"<Menu(id={self.id}, menu_type='{self.menu_type}', restaurant_id={self.restaurant_id})>"
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -58,6 +72,7 @@ class Menu(db.Model):
             "restaurant_id": self.restaurant_id,
             "dishes": [dish.to_dict() for dish in self.dishes]
         }
+
 
 class Dish(db.Model):
     __tablename__ = 'dish'
@@ -71,7 +86,7 @@ class Dish(db.Model):
     protein = db.Column(db.Float)
     fat = db.Column(db.Float)
     energy = db.Column(db.Float)
-    carbs = db.Column(db.Float) 
+    carbs = db.Column(db.Float)
     is_lactose_free = db.Column(db.Boolean, default=True)
     is_halal = db.Column(db.Boolean, default=True)
     is_vegan = db.Column(db.Boolean, default=True)
@@ -81,8 +96,12 @@ class Dish(db.Model):
     is_soy_free = db.Column(db.Boolean, default=True)
     is_available = db.Column(db.Boolean, default=True)
     image = db.Column(db.String(100))
+
     def __repr__(self):
-        return f"<User {self.name}>"
+        return (f"<Dish(id={self.id}, dish_name='{self.dish_name}', price={self.price}, "
+                f"restaurant_id={self.restaurant_id}, menu_id={self.menu_id}, "
+                f"is_available={self.is_available})>")
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -104,6 +123,7 @@ class Dish(db.Model):
             "image": self.image
         }
 
+
 class Theme(db.Model):
     __tablename__ = 'theme'
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
@@ -113,6 +133,8 @@ class Theme(db.Model):
     accentcolor2 = db.Column(db.String(50), nullable=False)
     logo1 = db.Column(db.String(100), nullable=False)
     logo2 = db.Column(db.String(100))
+
     def __repr__(self):
-        return f"<User {self.name}>"
-    
+        return (f"<Theme(id={self.id}, restaurant_id={self.restaurant_id}, "
+                f"bgcolor='{self.bgcolor}', accentcolor1='{self.accentcolor1}', "
+                f"accentcolor2='{self.accentcolor2}', logo1='{self.logo1}', logo2='{self.logo2}')>")

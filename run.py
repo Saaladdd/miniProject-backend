@@ -1,5 +1,6 @@
 from app import app,db,migrate,jwt
 from flask import request,jsonify
+from app import models
 from app.models import User,Restaurant,Menu,Dish,Theme,Preferences
 from datetime import timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
