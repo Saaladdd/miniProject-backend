@@ -14,8 +14,8 @@ app.config['JWT_SECRET_KEY'] = 'Num3R0n4u7s!Num3R0n4u7s!'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=6)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-jwt = JWTManager(app)
-from app import models
-with app.app_context():
-    db.create_all()
+
+
+from app import models,routes
+
 
