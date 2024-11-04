@@ -18,6 +18,6 @@ def sort_user_preferences(user_id,menu_id):
             continue
         if  user_preferences.is_jain and not dish.is_jain:
             continue
-        updated_menu.append(dish)
+        updated_menu.append(dish.id)
     return updated_menu
 

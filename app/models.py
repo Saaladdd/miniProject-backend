@@ -1,5 +1,8 @@
 from app import db
 from datetime import datetime
+import pytz
+
+ist = pytz.timezone('Asia/Kolkata')
 
 
 class User(db.Model):
@@ -9,15 +12,17 @@ class User(db.Model):
     phone = db.Column(db.String(15), unique=True)
     password = db.Column(db.String(120), unique=True)
     email = db.Column(db.String(60), unique=True)
-    preferences = db.relationship('Preferences', backref='user', lazy=True)
+    user_description = db.Column(db.String(200))
+    preferences = db.relationship('Preferences', backref='user', lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(id={self.id}, name='{self.name}', email='{self.email}', phone='{self.phone}')>"
 
+
 class Preferences(db.Model):
     __tablename__ = 'preferences'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_preferences_user_id', ondelete='CASCADE'), nullable=False)
     preference = db.Column(db.String(120), nullable=False)
     is_lactose_intolerant = db.Column(db.Boolean, default=False)
     is_halal = db.Column(db.Boolean, default=False)
@@ -25,13 +30,19 @@ class Preferences(db.Model):
     is_vegetarian = db.Column(db.Boolean, default=False)
     is_allergic_to_gluten = db.Column(db.Boolean, default=False)
     is_jain = db.Column(db.Boolean, default=False)
-    favorites = db.Column(db.String(200))
 
     def __repr__(self):
         return (f"<Preferences(id={self.id}, user_id={self.user_id}, preference='{self.preference}', "
                 f"is_lactose_intolerant={self.is_lactose_intolerant}, is_halal={self.is_halal}, "
                 f"is_vegan={self.is_vegan}, is_vegetarian={self.is_vegetarian}, "
                 f"is_allergic_to_gluten={self.is_allergic_to_gluten}, is_jain={self.is_jain})>")
+
+    def description(self):
+        return (f"""is_lactose_intolerant={self.is_lactose_intolerant}, is_halal={self.is_halal},
+                 is_vegan={self.is_vegan}, is_vegetarian={self.is_vegetarian},
+                 is_allergic_to_gluten={self.is_allergic_to_gluten}, is_jain={self.is_jain},
+                 preference='{self.preference}'
+                 """)
 
 
 class Restaurant(db.Model):
@@ -48,30 +59,32 @@ class Restaurant(db.Model):
     is_vegetarian = db.Column(db.Boolean, default=False)
     is_halal = db.Column(db.Boolean, default=False)
     description = db.Column(db.String(200))
-    menus = db.relationship('Menu', backref='restaurant', lazy=True)
+    menus = db.relationship('Menu', backref='restaurant', lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
         return (f"<Restaurant(id={self.id}, name='{self.name}', cuisine='{self.cuisine}', "
                 f"address='{self.address}', phone='{self.phone}', email='{self.email}', "
                 f"rating={self.rating})>")
 
+
 class Favorites(db.Model):
     __tablename__ = 'favorites'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_favorites_user_id', ondelete='CASCADE'), nullable=False)
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', name='fk_favorites_restaurant_id', ondelete='CASCADE'), nullable=False)
     category = db.Column(db.String(20), nullable=False)
     dish = db.relationship('Dish', backref='favorites', lazy=True)
 
     def __repr__(self):
         return (f"<Favorites(id={self.id}, user_id={self.user_id}, restaurant_id={self.restaurant_id}, "
                 f"category='{self.category}')>")
-    
+
+
 class Menu(db.Model):
     __tablename__ = 'menu'
     id = db.Column(db.Integer, primary_key=True)
     menu_type = db.Column(db.String(20), nullable=False)
-    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', name='fk_menu_restaurant_id'), nullable=False)
     dishes = db.relationship('Dish', backref='menu', lazy=True)
 
     def __repr__(self):
@@ -85,12 +98,14 @@ class Menu(db.Model):
             "dishes": [dish.to_dict() for dish in self.dishes]
         }
 
+
 class Dish(db.Model):
     __tablename__ = 'dish'
     id = db.Column(db.Integer, primary_key=True)
     dish_name = db.Column(db.String(100), nullable=False)
-    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
-    menu_id = db.Column(db.Integer, db.ForeignKey('menu.id'))
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', name='fk_dish_restaurant_id', ondelete='CASCADE'), nullable=False)
+    favorites_id = db.Column(db.Integer, db.ForeignKey('favorites.id', ondelete='CASCADE'), nullable=False)
+    menu_id = db.Column(db.Integer, db.ForeignKey('menu.id', name='fk_dish_menu_id'))
     description = db.Column(db.String(200))
     price = db.Column(db.Float)
     protein = db.Column(db.Float)
@@ -106,6 +121,7 @@ class Dish(db.Model):
     is_soy_free = db.Column(db.Boolean, default=True)
     is_available = db.Column(db.Boolean, default=True)
     image = db.Column(db.String(100))
+
     def __repr__(self):
         return (f"<Dish(id={self.id}, dish_name='{self.dish_name}', price={self.price}, "
                 f"restaurant_id={self.restaurant_id}, menu_id={self.menu_id}, "
@@ -131,9 +147,10 @@ class Dish(db.Model):
             "image": self.image
         }
 
+
 class Theme(db.Model):
     __tablename__ = 'theme'
-    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', name='fk_theme_restaurant_id', ondelete='CASCADE'), nullable=False)
     id = db.Column(db.Integer, primary_key=True)
     bgcolor = db.Column(db.String(50))
     accentcolor1 = db.Column(db.String(50))
@@ -145,16 +162,16 @@ class Theme(db.Model):
         return (f"<Theme(id={self.id}, restaurant_id={self.restaurant_id}, "
                 f"bgcolor='{self.bgcolor}', accentcolor1='{self.accentcolor1}', "
                 f"accentcolor2='{self.accentcolor2}', logo1='{self.logo1}', logo2='{self.logo2}')>")
-    
+
+
 class Conversation(db.Model):
     __tablename__ = 'chat_history'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_chat_history_user_id', ondelete='CASCADE'), nullable=False)
     role = db.Column(db.String(20), nullable=False)
     content = db.Column(db.String(50), nullable=False)
-    user_description = db.Column(db.String(200), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+    created_at = db.Column(db.DateTime, default=datetime.now(ist))
+
     def __repr__(self):
         return (f"<ChatHistory(id={self.id}, user_id={self.user_id}, message='{self.content}', "
                 f"created_at='{self.created_at}')>")

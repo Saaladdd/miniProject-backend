@@ -1,23 +1,29 @@
 from flask import jsonify, request
-from app import app, db
+import os
+from app import app, db,jwt
 from app.models import User, Preferences, Restaurant, Menu, Dish
+from ai import create_user_description,chatbot_chat
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from datetime import timedelta
 from flask_jwt_extended import JWTManager
 from app.functions import sort_user_preferences
+from openai import OpenAIError
+from dotenv import load_dotenv
+import openai
 
-jwt = JWTManager(app)
+load_dotenv()
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
-@app.route('/api/register', methods=['POST'])
-def register():
+@app.route('/api/user/register', methods=['POST'])
+def register_user():
     data = request.json
     name = data.get('name')
     email = data.get('email')
+    preference = data.get('preference')
     password = data.get('password')
     phone = data.get('phone')
-    preference = data.get('preferences')
     is_lactose_intolerant = data.get('is_lactose_intolerant')
     is_halal = data.get('is_halal')
     is_vegan = data.get('is_vegan')
@@ -37,7 +43,6 @@ def register():
     try:
         db.session.add(user)
         db.session.flush()
-        print("Hi")
         preferences = Preferences(
             user_id=user.id,
             preference=preference,
@@ -49,15 +54,19 @@ def register():
             is_jain=is_jain
         )
         db.session.add(preferences)
+        try:user.user_description = create_user_description(user.id,app.config['OPENAI_API_KEY'])
+        except OpenAIError as e:return jsonify({"error": str(e)}), 500
+        db.session.add(user)
         db.session.commit()
+        
         return jsonify({"message": "User and preferences created successfully"}), 201
 
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": e}), 500
  
-@app.route('/api/login', methods=['POST'])
-def login():
+@app.route('/api/user/login', methods=['POST'])
+def login_user():
     data = request.json
     phone = data.get('phone')
     email = data.get('email')
@@ -77,8 +86,25 @@ def login():
     access_token = create_access_token(identity=user.id, expires_delta=timedelta(hours=1))
     return jsonify(access_token=access_token), 200
 
-@app.route('/api/add_restaurant',methods=['POST'])
-def add_restaurant():
+@app.route('/api/user/delete/<int:user_id>', methods=['DELETE'])
+@jwt_required
+def delete_user(user_id):
+    current_user_id = get_jwt_identity()
+    if current_user_id != user_id:
+        return jsonify({"message": "Unauthorized action."}), 403
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+    try:
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({"message": "User deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": e}), 500
+
+@app.route('/api/restaurant/register',methods=['POST'])
+def register_restaurant():
     data = request.json
     name = data.get('name')
     address = data.get('address')
@@ -99,6 +125,35 @@ def add_restaurant():
     db.session.commit()
     return jsonify({"message": "Restaurant added successfully"}), 201
 
+@app.route('/api/restaurant/login',methods=['POST'])
+def login_restaurant():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    if not email or not password:
+        return jsonify({"message": "Please enter all required fields"}), 401
+    restaurant = Restaurant.query.filter_by(email=email).first()
+    if not restaurant or not check_password_hash(restaurant.password, password):
+        return jsonify({"message": "Invalid credentials"}), 401
+    access_token = create_access_token(identity=restaurant.id, expires_delta=timedelta(hours=1))
+    return jsonify(access_token=access_token), 200
+
+@app.route('/api/restaurant/delete/<int:rest_id>', methods=['DELETE'])
+@jwt_required
+def delete_restaurant(rest_id):
+    current_rest_id = get_jwt_identity()
+    if current_rest_id != rest_id:
+        return jsonify({"message": "Unauthorized action."}), 403
+    restaurant = Restaurant.query.get(rest_id)
+    if not restaurant:
+        return jsonify({"message": "Restaurant not found"}), 404
+    try:
+        db.session.delete(restaurant)
+        db.session.commit()
+        return jsonify({"message": "Restaurant deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": e}), 500
 
 @app.route('/api/<int:rest_id>/create_menu',methods=['POST'])
 def create_menu(rest_id):
@@ -112,12 +167,30 @@ def create_menu(rest_id):
     return jsonify({"message": "Menu created successfully"}), 201
 
 @app.route('/api/<int:rest_id>/get_menu',methods=['GET'])
-def get_menu_(rest_id):
+def get_menus(rest_id):
     menu = Menu.query.filter_by(restaurant_id=rest_id).all()
     if not menu:
         return jsonify({"message": "Menu not found"}), 404
     return jsonify({"menu": [m.to_dict() for m in menu]})
 
+@app.route('/api/<int:rest_id>/menu/delete/<int:menu_id>', methods=['DELETE'])
+@jwt_required
+def delete_menu(menu_id,rest_id):
+    current_rest_id = get_jwt_identity()
+    if current_rest_id != rest_id:
+        return jsonify({"message": "Unauthorized action."}), 403
+    menu = Menu.query.get(menu_id)
+    if not menu:
+        return jsonify({"message": "Menu not found"}), 404
+    try:
+        db.session.delete(menu)
+        db.session.commit()
+        return jsonify({"message": "Menu deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(e)
+        return jsonify({"message": "Error deleting menu"}),500
+    
 @app.route('/api/<int:rest_id>/create_dish',methods=['POST'])
 def create_dish(rest_id):
     data = request.json
@@ -159,14 +232,12 @@ def create_dish(rest_id):
         print(e)
         return jsonify({"message": "Error creating dish please ensure all required fields are filled."}), 500
     
-
 @app.route('/api/<int:rest_id>/get_all_dishes',methods=['GET'])
 def get_dishes(rest_id):
     dishes = Dish.query.filter_by(restaurant_id=rest_id).all()
     if not dishes:
         return jsonify({"message": "Dishes not found"}), 404
     return jsonify({"dishes": [dish.to_dict() for dish in dishes]})
-
 
 @app.route('/api/add_to_menu',methods=['POST'])
 def add_to_menu():
@@ -192,14 +263,14 @@ def add_to_menu():
         return jsonify({"message": "Error adding dish to menu"}), 500
     return jsonify({"message": "Dish added to menu"}), 200
 
-@app.route('/api/<int:rest_id>/menu/<int:menu_id>',methods=['GET'])
+@app.route('/api/<int:rest_id>/get_menu/<int:menu_id>',methods=['GET'])
 def get_restaurant_menu(rest_id,menu_id):
     menu = Menu.query.filter_by(restaurant_id=rest_id, id=menu_id).first()
     if not menu:
         return jsonify({"message": "Menu not found"}), 404
     return jsonify({"menu": menu.to_dict()})
 
-@app.route('/api/<int:user_id>/get_menu/<int:menu_id>', methods=['GET'])
+@app.route('/api/<int:user_id>/menu/<int:menu_id>', methods=['GET'])
 def get_user_menu(user_id, menu_id):
     user = User.query.get(user_id)
     choice = request.json.get('choice',0)
