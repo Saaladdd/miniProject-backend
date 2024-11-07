@@ -2,7 +2,7 @@ from openai import OpenAI
 from flask import request,jsonify
 from myapp.models import Preferences,Menu,Conversation,Dish,User,Restaurant
 from myapp import db
-from myapp.functions import sort_user_preferences, generate_session_id, get_user_desc_string, get_conversation_history, save_message, get_menu_for_chatbot, get_filtered_menu_for_chatbot   
+from myapp.functions import get_user_desc_string, get_conversation_history, save_message, get_menu_for_chatbot, get_filtered_menu_for_chatbot, get_restaurant_details 
 
     
 def chatbot_chat(user_id: int, rest_id: int, menu_id: int, user_input: str, api_key):
@@ -16,6 +16,7 @@ def chatbot_chat(user_id: int, rest_id: int, menu_id: int, user_input: str, api_
 
     filtered_menu = get_filtered_menu_for_chatbot(menu_id, user_id)
     unfiltered_menu = get_menu_for_chatbot(menu_id, user_id)
+    restaurant_details = get_restaurant_details(rest_id)
 
     messages = [
         {
@@ -35,6 +36,7 @@ def chatbot_chat(user_id: int, rest_id: int, menu_id: int, user_input: str, api_
             """
         },
         {"role": "system", "content": f"The user description is:{user_description}"},
+        {"role": "system", "content": f"The restaurant details are:{restaurant_details}"},
         {"role": "system", "content": f"The filtered menu is: {filtered_menu}"},
         {"role": "system", "content": f"The unfiltered menu is: {unfiltered_menu}"}
     ]

@@ -18,12 +18,13 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 @app.route('/api/user/register', methods=['POST'])
 def register_user():
-    data = request.json
+    data = request.get_json()
+
     name = data.get('name')
     email = data.get('email')
-    preference = data.get('preference')
-    password = data.get('password')
     phone = data.get('phone')
+    password = data.get('password')
+    preference = data.get('preference')
     is_lactose_intolerant = data.get('is_lactose_intolerant')
     is_halal = data.get('is_halal')
     is_vegan = data.get('is_vegan')
@@ -32,18 +33,25 @@ def register_user():
     is_jain = data.get('is_jain')
 
     if not email and not phone:
-        return jsonify({"message": "Please enter your email or phone number."}), 401
+        return jsonify({'message': 'Please enter your email or phone number.'}), 401
 
     user_exists = User.query.filter((User.phone == phone) | (User.email == email)).first()
     if user_exists:
-        return jsonify({"message": "User with that username or email already exists"}), 409
-    print(password)
+        return jsonify({'message': 'User with that username or email already exists.'}), 409
+
     hashed_password = generate_password_hash(password)
-    user = User(name=name, email=email, phone=phone, password=hashed_password)
+    user = User(
+        name=name,
+        email=email,
+        phone=phone,
+        password=hashed_password
+    )
+
     try:
         with db.session.no_autoflush:
             db.session.add(user)
             db.session.flush()
+
         preferences = Preferences(
             user_id=user.id,
             preference=preference,
@@ -55,17 +63,22 @@ def register_user():
             is_jain=is_jain
         )
         db.session.add(preferences)
-        try:user.user_description = create_user_description(user.id,app.config['OPENAI_API_KEY'])
-        except OpenAIError as e:return jsonify({"error": str(e)}), 500
+
+        try:
+            user.user_description = create_user_description(user.id, app.config['OPENAI_API_KEY'])
+        except OpenAIError as e:
+            return jsonify({'error': str(e)}), 500
+
         db.session.add(user)
         db.session.commit()
-        
-        return jsonify({"message": "User and preferences created successfully"}), 201
+
+        return jsonify({'message': 'User and preferences created successfully.'}), 201
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": str(e)}), 500
- 
+        return jsonify({'message': str(e)}), 500
+
+
 @app.route('/api/user/login', methods=['POST'])
 def login_user():
     data = request.json
@@ -397,9 +410,10 @@ def create_order(session_id, user_id):
     try:
         order = Order.query.get(session_id)
         if not order:
-            order = Order(session_id=session_id)
+            order = Order(session_id=session_id,status =True)
             db.session.add(order)
-
+        if order.status == False:
+            return jsonify({"message": "Invalid Session"}),403
         for item in items:
             dish_id = item.get('dish_id')
             quantity = item.get('quantity')
@@ -416,6 +430,19 @@ def create_order(session_id, user_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Error processing order", "error": str(e)}), 500
+    
+@app.route('/api/user/<int:user_id>/restaurant/end_order/<int:session_id>', methods=['POST'])
+@jwt_required()
+def end_order(user_id, session_id):
+    current_user_id = get_jwt_identity()
+    if current_user_id != user_id:
+        return jsonify({"message": "Unauthorized action."}), 403
+    order = Order.query.get(session_id)
+    if not order:
+        return jsonify({"message": "Order not found"}), 404
+    order.status = False
+    db.session.commit()
+    return jsonify({"message": "Order completed successfully"}), 200
     
 @app.route('/api/user/<int:user_id>/restaurant/<int:rest_id>/chat', methods=['POST'])
 @jwt_required()

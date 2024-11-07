@@ -60,6 +60,9 @@ class Restaurant(db.Model):
     description = db.Column(db.String(200))
     menus = db.relationship('Menu', backref='restaurant', lazy=True, cascade="all, delete-orphan")
 
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns if (c.name != "password" and c.name != "id")}
+
     def __repr__(self):
         return (f"<Restaurant(id={self.id}, name='{self.name}', cuisine='{self.cuisine}', "
                 f"address='{self.address}', phone='{self.phone}', email='{self.email}', "
@@ -153,7 +156,7 @@ class Theme(db.Model):
                 f"accentcolor2='{self.accentcolor2}', logo1='{self.logo1}', logo2='{self.logo2}')>")
 
 class Conversation(db.Model):
-    __tablename__ = 'chat_history'
+    __tablename__ = 'conversation'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_chat_history_user_id', ondelete='CASCADE'), nullable=False)
     rest_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', name='fk_chat_history_rest_id', ondelete='CASCADE'), nullable=False)
@@ -172,6 +175,7 @@ class Order(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete = 'CASCADE'), nullable=False)
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', ondelete='CASCADE'), nullable=False)
     session_id = db.Column(db.Integer, nullable=False,unique=True)
+    status = db.Column(db.Boolean, nullable=False)
     total_cost = db.Column(db.Float, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.now(ist))
     

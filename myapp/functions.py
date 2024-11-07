@@ -14,6 +14,19 @@ def get_conversation_history(user_id,rest_id):
     conversations = Conversation.query.filter_by(user_id=user_id,rest_id=rest_id).all()
     return [{"role": convo.role, "content": convo.content} for convo in conversations]
 
+def get_restaurant_details(rest_id: int) -> str:
+    rest = Restaurant.query.filter_by(id=rest_id).first()
+    
+    if not rest:
+        return "Restaurant not found."
+
+    rest_description = "This is the restaurant's details:"
+    for key, value in rest.to_dict().items():
+        rest_description += f"\n{key}: {value}"
+        
+    return rest_description
+
+
 def get_filtered_menu_for_chatbot(menu_id, user_id):
     all_dishes = Dish.query.filter_by(menu_id=menu_id).all()
     filtered_dish_ids = sort_user_preferences(user_id, menu_id)
