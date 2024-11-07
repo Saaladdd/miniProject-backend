@@ -20,6 +20,6 @@ migrate = Migrate(app, db)
 jwt = JWTManager(app)
 
 
-from app import models,routes
+from myapp import models,routes
 
 

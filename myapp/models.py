@@ -1,4 +1,4 @@
-from app import db
+from myapp import db
 from datetime import datetime
 import pytz
 
@@ -13,11 +13,11 @@ class User(db.Model):
     password = db.Column(db.String(120), unique=True)
     email = db.Column(db.String(60), unique=True)
     user_description = db.Column(db.String(200))
+    profile_photo = db.Column(db.String(100))
     preferences = db.relationship('Preferences', backref='user', lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(id={self.id}, name='{self.name}', email='{self.email}', phone='{self.phone}')>"
-
 
 class Preferences(db.Model):
     __tablename__ = 'preferences'
@@ -43,8 +43,7 @@ class Preferences(db.Model):
                  is_allergic_to_gluten={self.is_allergic_to_gluten}, is_jain={self.is_jain},
                  preference='{self.preference}'
                  """)
-
-
+    
 class Restaurant(db.Model):
     __tablename__ = 'restaurant'
     id = db.Column(db.Integer, primary_key=True)
@@ -66,7 +65,6 @@ class Restaurant(db.Model):
                 f"address='{self.address}', phone='{self.phone}', email='{self.email}', "
                 f"rating={self.rating})>")
 
-
 class Favorites(db.Model):
     __tablename__ = 'favorites'
     id = db.Column(db.Integer, primary_key=True)
@@ -78,7 +76,6 @@ class Favorites(db.Model):
     def __repr__(self):
         return (f"<Favorites(id={self.id}, user_id={self.user_id}, restaurant_id={self.restaurant_id}, "
                 f"category='{self.category}')>")
-
 
 class Menu(db.Model):
     __tablename__ = 'menu'
@@ -98,13 +95,12 @@ class Menu(db.Model):
             "dishes": [dish.to_dict() for dish in self.dishes]
         }
 
-
 class Dish(db.Model):
     __tablename__ = 'dish'
     id = db.Column(db.Integer, primary_key=True)
     dish_name = db.Column(db.String(100), nullable=False)
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', name='fk_dish_restaurant_id', ondelete='CASCADE'), nullable=False)
-    favorites_id = db.Column(db.Integer, db.ForeignKey('favorites.id', ondelete='CASCADE'), nullable=False)
+    favorites_id = db.Column(db.Integer, db.ForeignKey('favorites.id', ondelete='CASCADE'))
     menu_id = db.Column(db.Integer, db.ForeignKey('menu.id', name='fk_dish_menu_id'))
     description = db.Column(db.String(200))
     price = db.Column(db.Float)
@@ -121,12 +117,6 @@ class Dish(db.Model):
     is_soy_free = db.Column(db.Boolean, default=True)
     is_available = db.Column(db.Boolean, default=True)
     image = db.Column(db.String(100))
-
-    def __repr__(self):
-        return (f"<Dish(id={self.id}, dish_name='{self.dish_name}', price={self.price}, "
-                f"restaurant_id={self.restaurant_id}, menu_id={self.menu_id}, "
-                f"is_available={self.is_available})>")
-
     def to_dict(self):
         return {
             "id": self.id,
@@ -147,7 +137,6 @@ class Dish(db.Model):
             "image": self.image
         }
 
-
 class Theme(db.Model):
     __tablename__ = 'theme'
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', name='fk_theme_restaurant_id', ondelete='CASCADE'), nullable=False)
@@ -163,11 +152,11 @@ class Theme(db.Model):
                 f"bgcolor='{self.bgcolor}', accentcolor1='{self.accentcolor1}', "
                 f"accentcolor2='{self.accentcolor2}', logo1='{self.logo1}', logo2='{self.logo2}')>")
 
-
 class Conversation(db.Model):
     __tablename__ = 'chat_history'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_chat_history_user_id', ondelete='CASCADE'), nullable=False)
+    rest_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', name='fk_chat_history_rest_id', ondelete='CASCADE'), nullable=False)
     role = db.Column(db.String(20), nullable=False)
     content = db.Column(db.String(50), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now(ist))
@@ -175,3 +164,30 @@ class Conversation(db.Model):
     def __repr__(self):
         return (f"<ChatHistory(id={self.id}, user_id={self.user_id}, message='{self.content}', "
                 f"created_at='{self.created_at}')>")
+
+class Order(db.Model):
+    __tablename__ = 'orders'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete = 'CASCADE'), nullable=False)
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', ondelete='CASCADE'), nullable=False)
+    session_id = db.Column(db.Integer, nullable=False,unique=True)
+    total_cost = db.Column(db.Float, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.now(ist))
+    
+    items = db.relationship('OrderItem', backref='order', lazy=True, cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return (f"Order(id={self.id}, user_id={self.user_id}, restaurant_id={self.restaurant_id},session_id={self.session_id})") 
+
+class OrderItem(db.Model):
+    __tablename__ = 'order_items'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False)
+    dish_id = db.Column(db.Integer, db.ForeignKey('dish.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Float, nullable=False)
+
+    def __repr__(self):
+        return (f"<OrderItem(id={self.id}, order_id={self.order_id}, dish_id={self.dish_id}")
