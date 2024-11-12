@@ -15,6 +15,7 @@ class User(db.Model):
     user_description = db.Column(db.String(200))
     profile_photo = db.Column(db.String(100))
     preferences = db.relationship('Preferences', backref='user', lazy=True, cascade="all, delete-orphan")
+    orders = db.relationship('Order', backref='user', lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(id={self.id}, name='{self.name}', email='{self.email}', phone='{self.phone}')>"
@@ -47,6 +48,8 @@ class Preferences(db.Model):
 class Restaurant(db.Model):
     __tablename__ = 'restaurant'
     id = db.Column(db.Integer, primary_key=True)
+    banner = db.Column(db.String(100))
+    profile_photo = db.Column(db.String(100))
     password = db.Column(db.String(120), nullable=False)
     name = db.Column(db.String(50), nullable=False)
     address = db.Column(db.String(120), nullable=False)

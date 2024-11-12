@@ -6,9 +6,12 @@ from flask_jwt_extended import JWTManager
 from datetime import timedelta
 import os
 from dotenv import load_dotenv
+from myapp.config import Config
 load_dotenv()
 
+
 app = Flask(__name__)
+app.config.from_object(Config)
 CORS(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False

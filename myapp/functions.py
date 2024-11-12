@@ -26,7 +26,6 @@ def get_restaurant_details(rest_id: int) -> str:
         
     return rest_description
 
-
 def get_filtered_menu_for_chatbot(menu_id, user_id):
     all_dishes = Dish.query.filter_by(menu_id=menu_id).all()
     filtered_dish_ids = sort_user_preferences(user_id, menu_id)
