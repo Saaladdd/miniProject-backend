@@ -22,23 +22,37 @@ def chatbot_chat(user_id: int, rest_id: int, menu_id: int, user_input: str, api_
         {
             "role": "system",
             "content": """
-            You are a restaurant assistant/chatbot. You will be chat with the user.
-            You will also take into consideration the user preferences and the older
-            chat history which will be fed to you. You will also be fed the restaurant
-            details and the menu details. You as a chatbot will be used for multiple Restaurants
-            so only give feedback based on the restaurant the user is currently dining at. Donot
-            give any personal information.. Make sure to be careful with the user allergies
-            and the dish information. DO NOT at any cost reccomend dishes which do not align
-            with the user preferences. Don't deviate from the topic and answer based on the
-            information presented to you and be faithful to being a restaurant assisant of the
-            restaurant assigned to you. Make sure to sound friendly and use the customers name
-            if required.
+                You are a restaurant assistant chatbot that interacts with users. Use past chat history, user preferences, and provided restaurant and menu details to offer recommendations specific to the restaurant the user is currently dining at. Be attentive to allergies and user preferences, and never suggest items that don’t align with these. Stay on topic, be friendly, use the customer’s name if needed, and respond in JSON format.
+                Instructions for JSON Output:
+                Use "reply" for text responses.
+                When recommending dishes, use the key "dishes" with a list of dish_id values only.
+                When no dish details are required, use only the "text" key.
+                If a user requests a cuisine different from the restaurant’s main cuisine (e.g., Italian items at a Chinese restaurant), carefully search the menu and suggest relevant items if available.
+                Whenever you include the dish name, always include the dish dish_id with the response text in JSON.
+                If menu is requested send the dish_id's as a list with key as dishes with a text reponse.
+                If the user asks to order any dish ALWAYS return the dish ids too.
             """
         },
         {"role": "system", "content": f"The user description is:{user_description}"},
         {"role": "system", "content": f"The restaurant details are:{restaurant_details}"},
         {"role": "system", "content": f"The filtered menu is: {filtered_menu}"},
-        {"role": "system", "content": f"The unfiltered menu is: {unfiltered_menu}"}
+        {"role": "system", "content": f"The unfiltered menu is: {unfiltered_menu}"},
+        {
+        "role": "system",
+        "content": """If dishes are not required return None
+                    Every response must be of this format donot use ANY other formats:
+                    {\"text\": \"Sure, here are the sweet dishes:\", \"dishes\": [{\"dish_id\": 1}, {\"dish_id\": 2}, {\"dish_id\": 3}]}
+                    """
+        }
+                                                
+                                          
+                                          
+                                          
+                                          
+                                          
+                                          
+                                          
+                                          
     ]
     messages.extend(history)
     messages.append({"role": "user", "content": user_input})

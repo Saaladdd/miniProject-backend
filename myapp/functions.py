@@ -2,6 +2,8 @@ from myapp.models import User, Preferences, Restaurant, Menu, Dish, Theme, Conve
 from myapp import db
 import secrets
 import base64
+import hashlib
+import os
 
 def save_message(user_id, rest_id, role, content):
     try:
@@ -33,6 +35,7 @@ def get_filtered_menu_for_chatbot(menu_id, user_id):
     filtered_menu_for_chatbot = "Here is the menu based on your preferences:\n\n"
     for dish in filtered_dishes:
         filtered_menu_for_chatbot += (
+            f"ID: {dish.id}\n"
             f"Dish Name: {dish.dish_name}\n"
             f"Description: {dish.description or 'No description available'}\n"
             f"Price: ${dish.price:.2f}\n"
@@ -57,6 +60,7 @@ def get_menu_for_chatbot(menu_id, user_id):
     menu_for_chatbot = "Here is the unfiltered menu:\n\n"
     for dish in all_dishes:
         menu_for_chatbot += (
+            f"ID: {dish.id}\n"
             f"Dish Name: {dish.dish_name}\n"
             f"Description: {dish.description or 'No description available'}\n"
             f"Price: ${dish.price:.2f}\n"
@@ -117,3 +121,10 @@ def generate_session_id(user_id):
     random_bytes = secrets.token_bytes(4)
     session_id = f"{user_id}-{base64.urlsafe_b64encode(random_bytes).decode()}"
     return session_id
+
+def hash_filename(filename):
+    name, extension = os.path.splitext(filename)
+    hash_object = hashlib.md5(name.encode())
+    unique_hash = hash_object.hexdigest()
+    new_filename = f"{unique_hash}{extension}"
+    return new_filename

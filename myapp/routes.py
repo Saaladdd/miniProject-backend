@@ -7,7 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from datetime import timedelta
 from flask_jwt_extended import JWTManager
-from myapp.functions import sort_user_preferences, generate_session_id
+from myapp.functions import sort_user_preferences, generate_session_id,hash_filename
 from openai import OpenAIError
 from dotenv import load_dotenv
 import openai
@@ -140,15 +140,12 @@ def edit_user():
     user_pref = Preferences.query.filter_by(user_id=user_id).first()
     if not user_pref:
         return jsonify({'message': 'Preferences not found'}), 404
-    
     image_path = user.profile_photo
     if profile_photo:
         old_photo_filename = user.profile_photo
         if old_photo_filename:
-            old_image_path = os.path.join(app.config['USER_PROFILE_PICTURE_PATH'], old_photo_filename)
-            if os.path.exists(old_image_path):
-                os.remove(old_image_path)
-        unique_filename = f"{name}_{phone}_{profile_photo.filename}"
+                os.remove(old_photo_filename)
+        unique_filename = hash_filename(profile_photo)
         image_path = os.path.join(app.config['USER_PROFILE_PICTURE_PATH'], unique_filename)
         os.makedirs(app.config['USER_PROFILE_PICTURE_PATH'], exist_ok=True)
         profile_photo.save(image_path)
@@ -168,7 +165,7 @@ def edit_user():
         user.email = email or user.email
         user.phone = phone or user.phone
         user.profile_photo = image_path
-        user_pref.preference = preference or user_pref.preferences
+        user_pref.preference = preference or user_pref.preference
         user_pref.is_lactose_intolerant = is_lactose_intolerant or user_pref.is_lactose_intolerant
         user_pref.is_halal = is_halal or user_pref.is_halal
         user_pref.is_vegan = is_vegan or user_pref.is_vegan
@@ -230,12 +227,12 @@ def register_restaurant():
     profile_picture_path = None
 
     if banner:
-        unique_filename = f"{name}_{phone}_{banner.filename}"
+        unique_filename = hash_filename(banner)
         banner_path = os.path.join(app.config['RESTAURANT_BANNER_PATH'], unique_filename)
         os.makedirs(app.config['RESTAURANT_BANNER_PATH'], exist_ok=True)
         banner.save(banner_path)
     if profile_picture:
-        unique_filename = f"{name}_{phone}_{profile_picture.filename}"
+        unique_filename = hash_filename(profile_picture)
         profile_picture_path = os.path.join(app.config['RESTAURANT_PROFILE_PICTURE_PATH'], unique_filename)
         os.makedirs(app.config['RESTAURANT_PROFILE_PICTURE_PATH'], exist_ok=True)
         profile_picture.save(profile_picture_path)
@@ -301,7 +298,7 @@ def edit_restaurant():
         old_banner = restaurant.banner
         if old_banner:
             os.remove(old_banner)
-        unique_filename = f"{name}_{phone}_{banner.filename}"
+        unique_filename = hash_filename(banner)
         banner_path = os.path.join(app.config['RESTAURANT_BANNER_PATH'], unique_filename)
         os.makedirs(app.config['RESTAURANT_BANNER_PATH'], exist_ok=True)
         banner.save(banner_path)
@@ -309,7 +306,7 @@ def edit_restaurant():
         old_profile_picture = restaurant.profile_picture
         if old_profile_picture:
             os.remove(old_profile_picture)
-        unique_filename = f"{name}_{phone}_{profile_picture.filename}"
+        unique_filename = hash_filename(profile_picture)
         profile_picture_path = os.path.join(app.config['RESTAURANT_PROFILE_PICTURE_PATH'], unique_filename)
         os.makedirs(app.config['RESTAURANT_PROFILE_PICTURE_PATH'], exist_ok=True)
         profile_picture.save(profile_picture_path)
@@ -582,10 +579,33 @@ def chat( rest_id):
     if not user:
         return jsonify({"message": "User not found"}), 404
     data = request.get_json()
-    menu = request.data('menu_id')
+    menu = data.get('menu_id')
     user_input = data.get('user_input')
-    return chatbot_chat(user_id,rest_id,menu, user_input, app.config['OPENAI_API_KEY'])
+    try:
 
+        chat_response_tuple = chatbot_chat(user_id, rest_id, menu, user_input, app.config['OPENAI_API_KEY'])
+
+      
+        chat_response = chat_response_tuple[0]
+
+    
+        response_data = chat_response.get_json() 
+    
+        chat_reply = response_data.get("reply")
+        
+        if isinstance(chat_reply, str):
+            chat_reply = json.loads(chat_reply)
+
+        if not isinstance(chat_reply, dict):
+            return jsonify({"message": "Invalid reply format", "error": "Expected a dictionary"}), 400
+
+    except Exception as e:
+        return jsonify({"message": "Error processing chat", "error": str(e)}), 500
+    print(chat_reply)
+    text = chat_reply['text']
+    dishes = chat_reply.get('dishes', [])
+    dish_ids = [dish["dish_id"] for dish in dishes if "dish_id" in dish]
+    return jsonify({"text": text, "dish_ids": dish_ids})
 
 
 
