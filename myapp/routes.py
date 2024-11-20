@@ -217,7 +217,7 @@ def register_restaurant():
     email = data.get('email')
     cuisine = data.get('cuisine')
     is_vegetarian = data.get('is_vegetarian')
-    is_vegan = data.get('is_vegan')
+    is_vegan = data.get('is_vegan') 
     is_halal = data.get('is_halal')
     description = data.get('description')
     password = data.get('password')
@@ -246,7 +246,7 @@ def register_restaurant():
     new_restaurant = Restaurant(name=name,password=generate_password_hash(password),
                                 address=address, phone=phone, email=email, cuisine=cuisine,
                                 is_vegetarian=is_vegetarian, is_vegan=is_vegan, is_halal=is_halal, 
-                                description=description, banner=banner_path, profile_picture=profile_picture_path)
+                                description=description, banner=banner_path, profile_photo=profile_picture_path)
     db.session.add(new_restaurant)
     db.session.commit()
     return jsonify({"message": "Restaurant added successfully"}), 201
@@ -423,7 +423,8 @@ def create_dish():
     image_path = None
     if image:
         unique_filename = f"{rest_id}{dish_name}_{image.filename}"
-        image_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+        image_path = os.path.join(app.config['DISH_IMAGE_PATH'], unique_filename)
+        os.makedirs(app.config['DISH_IMAGE_PATH'], exist_ok=True)
         image.save(image_path)
 
     new_dish = Dish(
@@ -584,11 +585,7 @@ def chat( rest_id):
     try:
 
         chat_response_tuple = chatbot_chat(user_id, rest_id, menu, user_input, app.config['OPENAI_API_KEY'])
-
-      
         chat_response = chat_response_tuple[0]
-
-    
         response_data = chat_response.get_json() 
     
         chat_reply = response_data.get("reply")
