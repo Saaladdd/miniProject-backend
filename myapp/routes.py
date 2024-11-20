@@ -11,10 +11,16 @@ from myapp.functions import sort_user_preferences, generate_session_id,hash_file
 from openai import OpenAIError
 from dotenv import load_dotenv
 import openai
+import random
+import string
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+def generate_random_string(length):
+    characters = string.ascii_letters + string.digits
+    random_string = ''.join(random.choices(characters, k=length))
+    return random_string
 
 @app.route('/api/user/register', methods=['POST'])
 def register_user():
@@ -47,7 +53,8 @@ def register_user():
         return jsonify({'message': 'User with that username or email already exists.'}), 409
     
     if profile_photo:
-        unique_filename = f"{name}_{phone}_{profile_photo.filename}"
+        ext = profile_photo.filename.split('.')[-1]
+        unique_filename = f"{generate_random_string(16)}.{ext}"
         image_path = os.path.join(app.config['USER_PROFILE_PICTURE_PATH'], unique_filename)
         os.makedirs(app.config['USER_PROFILE_PICTURE_PATH'], exist_ok=True)
         profile_photo.save(image_path)
