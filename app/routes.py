@@ -1,4 +1,4 @@
-from flask import jsonify, request, json
+from flask import jsonify, request, json, send_file
 import os
 from app import app, db
 from app.models import User, Preferences, Restaurant, Menu, Dish, Theme, Order, OrderItem, Conversation, Favorites
@@ -21,6 +21,14 @@ def generate_random_string(length):
     characters = string.ascii_letters + string.digits
     random_string = ''.join(random.choices(characters, k=length))
     return random_string
+
+def return_link(filename):
+    return f"http://localhost:5000/uploads/{filename}"
+
+@app.route('/uploads/<path:filename>')
+def serve_image(filename):
+    filename = filename.replace('/','\\')
+    return send_file("..\\"+filename)
 
 @app.route('/api/user/register', methods=['POST'])
 def register_user():
@@ -92,6 +100,9 @@ def register_user():
             image_path = os.path.join(app.config['USER_PROFILE_PICTURE_PATH'], unique_filename)
             os.makedirs(app.config['USER_PROFILE_PICTURE_PATH'], exist_ok=True)
             profile_photo.save(image_path)
+        
+        user.profile_photo = image_path
+        db.session.commit()
         return jsonify({'message': 'User and preferences created successfully.'}), 201
 
     except Exception as e:
@@ -174,6 +185,7 @@ def get_user():
             },
             "conversations": conversations_data,
         }
+        response["user"]["profile_photo"] = return_link(user.profile_photo)
 
         return jsonify(response), 200
 

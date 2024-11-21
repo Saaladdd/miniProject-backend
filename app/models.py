@@ -19,6 +19,9 @@ class User(db.Model):
 
     def __repr__(self):
         return f"<User(id={self.id}, name='{self.name}', email='{self.email}', phone='{self.phone}')>"
+    
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns if (c.name != "password" and c.name != "id")}
 
 class Preferences(db.Model):
     __tablename__ = 'preferences'
