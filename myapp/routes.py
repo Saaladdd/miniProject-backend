@@ -7,20 +7,16 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from datetime import timedelta
 from flask_jwt_extended import JWTManager
-from myapp.functions import sort_user_preferences, generate_session_id,hash_filename
+from myapp.functions import sort_user_preferences, generate_session_id,hash_filename,generate_random_string
 from openai import OpenAIError
 from dotenv import load_dotenv
 import openai
-import random
-import string
+
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-def generate_random_string(length):
-    characters = string.ascii_letters + string.digits
-    random_string = ''.join(random.choices(characters, k=length))
-    return random_string
+
 
 @app.route('/api/user/register', methods=['POST'])
 def register_user():

@@ -4,6 +4,8 @@ import secrets
 import base64
 import hashlib
 import os
+import string
+import random
 
 def save_message(user_id, rest_id, role, content):
     try:
@@ -128,3 +130,8 @@ def hash_filename(filename):
     unique_hash = hash_object.hexdigest()
     new_filename = f"{unique_hash}{extension}"
     return new_filename
+
+def generate_random_string(length):
+    characters = string.ascii_letters + string.digits
+    random_string = ''.join(random.choices(characters, k=length))
+    return random_string
