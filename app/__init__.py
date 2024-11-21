@@ -6,7 +6,7 @@ from flask_jwt_extended import JWTManager
 from datetime import timedelta
 import os
 from dotenv import load_dotenv
-from myapp.config import Config
+from app.config import Config
 load_dotenv()
 
 
@@ -23,4 +23,4 @@ migrate = Migrate(app, db)
 jwt = JWTManager(app)
 
 
-from myapp import models,routes
+from app import models,routes

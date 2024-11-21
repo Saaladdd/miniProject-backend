@@ -1,6 +1,6 @@
 .env
-migrations/
-myapp/__pycache__/
+app/__pycache__/
 __pycache__/
 files/
-/instance/
+instance/
+migrations/

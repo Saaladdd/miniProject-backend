@@ -1,13 +1,13 @@
 from flask import jsonify, request, json
 import os
-from myapp import app, db
-from myapp.models import User, Preferences, Restaurant, Menu, Dish, Theme,Order,OrderItem
+from app import app, db
+from app.models import User, Preferences, Restaurant, Menu, Dish, Theme,Order,OrderItem
 from ai import create_user_description,chatbot_chat
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from datetime import timedelta
 from flask_jwt_extended import JWTManager
-from myapp.functions import sort_user_preferences, generate_session_id,hash_filename
+from app.functions import sort_user_preferences, generate_session_id,hash_filename
 from openai import OpenAIError
 from dotenv import load_dotenv
 import openai
@@ -52,13 +52,7 @@ def register_user():
     if user_exists:
         return jsonify({'message': 'User with that username or email already exists.'}), 409
     
-    if profile_photo:
-        ext = profile_photo.filename.split('.')[-1]
-        unique_filename = f"{generate_random_string(16)}.{ext}"
-        image_path = os.path.join(app.config['USER_PROFILE_PICTURE_PATH'], unique_filename)
-        os.makedirs(app.config['USER_PROFILE_PICTURE_PATH'], exist_ok=True)
-        profile_photo.save(image_path)
-    print(image_path)
+    
     hashed_password = generate_password_hash(password)
     user = User(
         name=name,
@@ -92,7 +86,12 @@ def register_user():
 
         db.session.add(user)
         db.session.commit()
-
+        if profile_photo:
+            ext = profile_photo.filename.split('.')[-1]
+            unique_filename = f"{generate_random_string(16)}.{ext}"
+            image_path = os.path.join(app.config['USER_PROFILE_PICTURE_PATH'], unique_filename)
+            os.makedirs(app.config['USER_PROFILE_PICTURE_PATH'], exist_ok=True)
+            profile_photo.save(image_path)
         return jsonify({'message': 'User and preferences created successfully.'}), 201
 
     except Exception as e:
