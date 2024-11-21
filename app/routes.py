@@ -4,9 +4,8 @@ from app import app, db
 from app.models import User, Preferences, Restaurant, Menu, Dish, Theme, Order, OrderItem, Conversation, Favorites
 from ai import create_user_description,chatbot_chat
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, JWTManager, get_jwt
 from datetime import timedelta
-from flask_jwt_extended import JWTManager
 from app.functions import sort_user_preferences, generate_session_id,hash_filename,generate_random_string
 from openai import OpenAIError
 from dotenv import load_dotenv
@@ -108,6 +107,13 @@ def register_user():
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': str(e)}), 500
+    
+@app.route('/api/role', methods=['GET'])
+@jwt_required()
+def get_user_role():
+    jwt_claims = get_jwt()
+    role = jwt_claims.get('role', 'user')
+    return jsonify({'role': role}), 200
 
 @app.route('/api/user/get', methods=['GET'])
 @jwt_required()
@@ -211,7 +217,7 @@ def login_user():
     if not user or not check_password_hash(user.password, password):
         return jsonify({"message": "Invalid credentials or password"}), 401
 
-    access_token = create_access_token(identity=user.id, expires_delta=timedelta(hours=2))
+    access_token = create_access_token(identity=user.id, expires_delta=timedelta(hours=2), additional_claims={"role": "user"})
     return jsonify(access_token=access_token), 200
 
 @app.route('/api/user/edit',methods=['POST'])
@@ -361,7 +367,7 @@ def login_restaurant():
     restaurant = Restaurant.query.filter_by(email=email).first()
     if not restaurant or not check_password_hash(restaurant.password, password):
         return jsonify({"message": "Invalid credentials"}), 401
-    access_token = create_access_token(identity=restaurant.id, expires_delta=timedelta(hours=1))
+    access_token = create_access_token(identity=restaurant.id, expires_delta=timedelta(hours=1), additional_claims={"role": "restaurant"})
     return jsonify(access_token=access_token), 200
 
 @app.route('/api/restaurant/edit',methods=['POST'])
