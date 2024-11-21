@@ -1,7 +1,7 @@
 from flask import jsonify, request, json
 import os
 from app import app, db
-from app.models import User, Preferences, Restaurant, Menu, Dish, Theme,Order,OrderItem
+from app.models import User, Preferences, Restaurant, Menu, Dish, Theme, Order, OrderItem, Conversation, Favorites
 from ai import create_user_description,chatbot_chat
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
@@ -98,6 +98,88 @@ def register_user():
         db.session.rollback()
         return jsonify({'message': str(e)}), 500
 
+@app.route('/api/user/get', methods=['GET'])
+@jwt_required()
+def get_user():
+    user_id = get_jwt_identity()
+    try:
+        
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
+
+        
+        preferences = Preferences.query.filter_by(user_id=user_id).first()
+        preferences_data = {
+            "preference": preferences.preference if preferences else None,
+            "is_lactose_intolerant": preferences.is_lactose_intolerant if preferences else None,
+            "is_halal": preferences.is_halal if preferences else None,
+            "is_vegan": preferences.is_vegan if preferences else None,
+            "is_vegetarian": preferences.is_vegetarian if preferences else None,
+            "is_allergic_to_gluten": preferences.is_allergic_to_gluten if preferences else None,
+            "is_jain": preferences.is_jain if preferences else None,
+        }
+
+        
+        orders = user.orders[-5:]
+        orders_data = [
+            {
+                "id": order.id,
+                "restaurant_id": order.restaurant_id,
+                "restaurant_name": Restaurant.query.get(order.restaurant_id).name,
+                "total_cost": order.total_cost,
+                "timestamp": order.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            }
+            for order in orders
+        ]
+
+        
+        favorite_restaurants = [
+            {
+                "id": fav.restaurant_id,
+                "name": Restaurant.query.get(fav.restaurant_id).name
+            }
+            for fav in Favorites.query.filter_by(user_id=user_id).all()
+        ]
+        favorite_dishes = [
+            {
+                "id": dish.id,
+                "name": dish.dish_name
+            }
+            for dish in Dish.query.filter(Dish.favorites_id.in_(
+                [fav.id for fav in Favorites.query.filter_by(user_id=user_id).all()]
+            )).all()
+        ]
+
+
+        conversations = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.created_at.desc()).limit(5).all()
+        conversations_data = [
+            {
+                "id": convo.id,
+                "rest_id": convo.rest_id,
+                "restaurant_name": Restaurant.query.get(convo.rest_id).name,
+                "content": convo.content,
+                "created_at": convo.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            for convo in conversations
+        ]
+
+        response = {
+            "user": user.to_dict(),
+            "preferences": preferences_data,
+            "orders": orders_data,
+            "favorites": {
+                "restaurants": favorite_restaurants,
+                "dishes": favorite_dishes,
+            },
+            "conversations": conversations_data,
+        }
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+    
 
 @app.route('/api/user/login', methods=['POST'])
 def login_user():
