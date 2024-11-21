@@ -1,8 +1,8 @@
 from openai import OpenAI
 from flask import request,jsonify
-from myapp.models import Preferences,Menu,Conversation,Dish,User,Restaurant
-from myapp import db
-from myapp.functions import get_user_desc_string, get_conversation_history, save_message, get_menu_for_chatbot, get_filtered_menu_for_chatbot, get_restaurant_details 
+from app.models import Preferences,Menu,Conversation,Dish,User,Restaurant
+from app import db
+from app.functions import get_user_desc_string, get_conversation_history, save_message, get_menu_for_chatbot, get_filtered_menu_for_chatbot, get_restaurant_details 
 
     
 def chatbot_chat(user_id: int, rest_id: int, menu_id: int, user_input: str, api_key):

@@ -1,3 +1,6 @@
 .env
+app/__pycache__/
+__pycache__/
+files/
 instance/
 migrations/

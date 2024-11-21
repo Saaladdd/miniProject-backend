@@ -1,4 +1,4 @@
-from myapp import db,app
+from app import db,app
 from sqlalchemy import text
 
 

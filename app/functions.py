@@ -1,5 +1,5 @@
-from myapp.models import User, Preferences, Restaurant, Menu, Dish, Theme, Conversation
-from myapp import db
+from app.models import User, Preferences, Restaurant, Menu, Dish, Theme, Conversation
+from app import db
 import secrets
 import base64
 import hashlib
