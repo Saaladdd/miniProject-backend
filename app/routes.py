@@ -752,7 +752,7 @@ def chat(rest_id):
     try:
         try:
             chat_response_tuple = chatbot_chat(user_id, rest_id, user_input, session_id, app.config['OPENAI_API_KEY'])
-            print(chat_response_tuple)
+            
 
 
             chat_response = chat_response_tuple[0]
@@ -778,8 +778,8 @@ def chat(rest_id):
             }
             for dish in queried_dishes
 ]
-
-        return jsonify({"text": text, "dish_ids": dish_details}), 200
+        print(dish_details)
+        return jsonify({"text": text, "dish_details": dish_details}), 200
     except Exception as e:
         return jsonify({"message": "Error processing chat", "error": str(e)}), 500
 
