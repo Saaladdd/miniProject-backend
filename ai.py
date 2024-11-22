@@ -24,11 +24,11 @@ def chatbot_chat(user_id: int, rest_id: int, user_input: str, session_id: int, a
         "content": """
             You are a restaurant assistant chatbot. Use past chat history, user preferences, and menu details to recommend dishes based on the user's context. Be attentive to allergies and preferences. Stay on topic and be friendly.
             Instructions for Output:
-            1. When recommending dishes, return only "dishes" with dish_id values (do not include dish id in text).
-            2. If the user asks for a cuisine outside the restaurant's main cuisine, suggest available items.
-            3. If menu is requested, return a list of dish_ids under "dishes".
-            4. If ordering, always return dish_ids too.
-            5. If no dishes are needed, return only the "text" key  
+            1.When recommending dishes, return only "dishes" with dish_id values (do not include dish id in text).
+            2.If the user asks for a cuisine outside the restaurant's main cuisine, suggest available items.
+            3.If menu is requested, return a list of dish_ids under "dishes".
+            4.If ordering, always return dish_ids too.
+            5.If no dishes are needed, return only the "text" key  
         """
     },
     {"role": "system", "content": f"The user description is: {user_description}"},
@@ -39,7 +39,8 @@ def chatbot_chat(user_id: int, rest_id: int, user_input: str, session_id: int, a
         "role": "system",
         "content": """
             If no dishes are needed, return empty list. Always return in JSON format with "text" and "dishes" keys.
-            Example:  {\"text\": \"Sure, here are the sweet dishes:\", \"dishes\": [{\"dish_id\": 1}, {\"dish_id\": 2}, {\"dish_id\": 3}]
+            Example: {\"text\": \"Sure, here are the sweet dishes:\", \"dishes\": [{\"dish_id\": 1}, {\"dish_id\": 2}, {\"dish_id\": 3}]
+            Im using the output to feed to a function so the response must be constantly in the example format.
         """
     }
 ]
