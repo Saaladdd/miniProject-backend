@@ -174,6 +174,13 @@ class Conversation(db.Model):
     def __repr__(self):
         return (f"<ChatHistory(id={self.id}, user_id={self.user_id}, message='{self.content}', "
                 f"created_at='{self.created_at}')>")
+    
+    def get_all_chats(self):
+        return {
+            "role": self.role,
+            "message": self.content,
+            "created_at": self.created_at
+        }
 
 class Order(db.Model):
     __tablename__ = 'orders'

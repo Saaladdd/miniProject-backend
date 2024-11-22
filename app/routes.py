@@ -700,7 +700,7 @@ def get_chat(rest_id):
         chats = Conversation.query.filter_by(session_id=session_id, user_id=user_id).all()
         if not chats:
             return jsonify({"message": "No chats found"}), 404
-        chat_list = [chat.to_dict() for chat in chats]
+        chat_list = [chat.get_all_chats() for chat in chats]
     except Exception as e:
         return jsonify({"message": "Error processing chat", "error": str(e)}), 500
 

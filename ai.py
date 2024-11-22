@@ -2,7 +2,7 @@ from openai import OpenAI
 from flask import request,jsonify
 from app.models import Preferences,Menu,Conversation,Dish,User,Restaurant
 from app import db
-from app.functions import get_user_desc_string, get_conversation_history, save_message, get_menu_for_chatbot, get_filtered_menu_for_chatbot, get_restaurant_details 
+from app.functions import get_user_desc_string, get_conversation_history, save_message, get_menu_for_chatbot, get_filtered_menu_for_chatbot, get_restaurant_details,format_response
 
     
 def chatbot_chat(user_id: int, rest_id: int, user_input: str, session_id: int, api_key):
@@ -43,15 +43,7 @@ def chatbot_chat(user_id: int, rest_id: int, user_input: str, session_id: int, a
                     Every response must be of this format donot use ANY other formats:
                     {\"text\": \"Sure, here are the sweet dishes:\", \"dishes\": [{\"dish_id\": 1}, {\"dish_id\": 2}, {\"dish_id\": 3}]}
                     """
-        }
-                                                
-                                          
-                                          
-                                          
-                                          
-                                          
-                                          
-                                          
+        }                               
                                           
     ]
     messages.extend(history)
@@ -59,7 +51,7 @@ def chatbot_chat(user_id: int, rest_id: int, user_input: str, session_id: int, a
     try:
         chat_completion = client.chat.completions.create(
             messages= messages,
-            model ="gpt-3.5-turbo",
+            model ="gpt-4o",
             temperature= 0.3,
             max_tokens= 1000
         )
@@ -68,7 +60,9 @@ def chatbot_chat(user_id: int, rest_id: int, user_input: str, session_id: int, a
         return jsonify({"error": "An error occurred while processing your request.", "details": str(e)}), 500
         
     save_message(user_id,rest_id,session_id, "user",user_input)
-    save_message(user_id,rest_id,session_id,"assistant",response)
+    assistant_response = format_response(response)
+    save_message(user_id,rest_id,session_id,"assistant",assistant_response)
+    print(response)
     return jsonify({"reply":response}),200
 
 def create_user_description(user_id: int, api_key: str) -> str:

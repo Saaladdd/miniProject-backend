@@ -7,6 +7,7 @@ import os
 import string
 import random
 from datetime import datetime
+import re
 
 def save_message(user_id, rest_id,session_id, role, content):
     try:
@@ -171,3 +172,9 @@ def generate_random_string(length):
 
 def return_link(filename):
     return f"http://localhost:5000/uploads/{filename}"
+
+def format_response(response):
+    match = re.search(r'"text":\s*"([^"]*)"', response)
+    if match:
+        text_value = match.group(1)
+    return text_value
