@@ -737,27 +737,32 @@ def chat(rest_id):
     user_input = data.get('user_input')
     try:
         try:
-            chat_response_tuple = chatbot_chat(user_id, rest_id, user_input,session_id, app.config['OPENAI_API_KEY'])
+            chat_response_tuple = chatbot_chat(user_id, rest_id, user_input, session_id, app.config['OPENAI_API_KEY'])
             print(chat_response_tuple)
+
+
             chat_response = chat_response_tuple[0]
-            print(chat_response.json)
-        
-            chat_reply = json.loads(chat_response.get_json().get("reply", "{}"))
-            print(chat_reply)
+            print(chat_response.get_json()) 
+
+            chat_reply = chat_response.json.get("reply", "{}")
+            chat_reply = json.loads(chat_reply)
+    
         except Exception as e: 
             return jsonify({"message": "Error with chat", "error": str(e)}), 500
 
         if not isinstance(chat_reply, dict):
             return jsonify({"message": "Invalid reply format", "error": "Expected a dictionary"}), 400
 
+        text = chat_reply.get('text', "")
+        dishes = chat_reply.get('dishes', [])
+        dish_ids = [dish.get("dish_id") for dish in dishes if "dish_id" in dish]
+
+        return jsonify({"text": text, "dish_ids": dish_ids}), 200
     except Exception as e:
         return jsonify({"message": "Error processing chat", "error": str(e)}), 500
-    print(chat_reply)
-    text = chat_reply['text']
-    dishes = chat_reply.get('dishes', [])
-    dish_ids = [dish["dish_id"] for dish in dishes if "dish_id" in dish]
-    return jsonify({"text": text, "dish_ids": dish_ids})
 
+
+   
 
 
 
