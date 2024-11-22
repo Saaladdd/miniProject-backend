@@ -576,6 +576,16 @@ def get_dishes(rest_id):
         return jsonify({"message": "Dishes not found"}), 404
     return jsonify({"dishes": [dish.to_dict() for dish in dishes]})
 
+@app.route('/api/dish/<int:dish_id>', methods=['GET'])
+def get_dish(dish_id):
+    dish = Dish.query.get(dish_id)
+    if not dish:
+        return jsonify({"message": "Dish not found"}), 404
+    dishes = dish.to_dict()
+    dishes['image'] = return_link(dish.image)
+    return jsonify(dishes)
+
+
 @app.route('/api/add_to_menu',methods=['POST'])
 @jwt_required()
 def add_to_menu():
