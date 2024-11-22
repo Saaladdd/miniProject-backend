@@ -712,6 +712,8 @@ def chat(rest_id):
     user_id = get_jwt_identity()
     data = request.json
     session_id = data.get('session_id')
+    if not session_id:
+        return jsonify({"message": "Missing session_id"}), 400
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"message": "User not found"}), 404
