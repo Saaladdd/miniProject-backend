@@ -30,7 +30,7 @@ def chatbot_chat(user_id: int, rest_id: int, user_input: str, session_id: int, a
                 If a user requests a cuisine different from the restaurant’s main cuisine (e.g., Italian items at a Chinese restaurant), carefully search the menu and suggest relevant items if available.
                 Whenever you include the dish name, always include the dish_id with the response text in JSON.
                 If menu is requested send the dish_id's as a list with key as dishes with a text reponse.
-                If the user asks to order any dish ALWAYS return the dish ids too.
+                If the user asks to order any dish ALWAYS return the dish ids too. 
             """
         },
         {"role": "system", "content": f"The user description is:{user_description}"},
@@ -42,6 +42,8 @@ def chatbot_chat(user_id: int, rest_id: int, user_input: str, session_id: int, a
         "content": """If dishes are not required return None.
                     Every response must be of this format donot use ANY other formats:
                     {\"text\": \"Sure, here are the sweet dishes:\", \"dishes\": [{\"dish_id\": 1}, {\"dish_id\": 2}, {\"dish_id\": 3}]}
+                    Also if the user enquires anything else except dishes BUT within the restaurant context then return the json with the text.
+                    Always return in json and keys as text and dishes no matter what.
                     """
         }                               
                                           
