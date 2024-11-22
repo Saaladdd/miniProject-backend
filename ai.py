@@ -27,7 +27,7 @@ def chatbot_chat(user_id: int, rest_id: int, user_input: str, session_id: int, a
             1.When recommending dishes, return only "dishes" with dish_id values (do not include dish id in text).
             2.If the user asks for a cuisine outside the restaurant's main cuisine, suggest available items.
             3.If menu is requested, return a list of dish_ids under "dishes".
-            4.If ordering, always return dish_ids too.
+            4.If you name the dish, always return dish_ids too unless its unavailable.
             5.If no dishes are needed, return only the "text" key  
             6.Don't use markup tags.
             7.At any cost do not go out of context of being a restaurant chatbot!

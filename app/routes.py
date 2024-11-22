@@ -371,6 +371,7 @@ def login_restaurant():
     return jsonify(access_token=access_token), 200
 
 @app.route('/api/restaurant/edit',methods=['POST'])
+@jwt_required()
 def edit_restaurant():
     rest_id = get_jwt_identity()
     restaurant = Restaurant.query.get(rest_id)
@@ -589,7 +590,6 @@ def get_dish(dish_id):
     dishes['image'] = return_link(dish.image)
     return jsonify({"dishes":dishes}), 200
 
-
 @app.route('/api/add_to_menu',methods=['POST'])
 @jwt_required()
 def add_to_menu():
@@ -770,8 +770,16 @@ def chat(rest_id):
         text = chat_reply.get('text', "")
         dishes = chat_reply.get('dishes', [])
         dish_ids = [dish.get("dish_id") for dish in dishes if "dish_id" in dish]
+        queried_dishes = Dish.query.filter(Dish.id.in_(dish_ids)).all()
+        dish_details = [
+            {
+                "dish_id": dish.id,
+                **dish.image_and_name()
+            }
+            for dish in queried_dishes
+]
 
-        return jsonify({"text": text, "dish_ids": dish_ids}), 200
+        return jsonify({"text": text, "dish_ids": dish_details}), 200
     except Exception as e:
         return jsonify({"message": "Error processing chat", "error": str(e)}), 500
 
