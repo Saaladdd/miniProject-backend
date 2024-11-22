@@ -430,6 +430,14 @@ def edit_restaurant():
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": str(e)}), 500
+    
+@app.route('/api/restaurant/landing/<int:rest_id>',methods=['GET'])
+def get_restaurant():
+    rest_id = get_jwt_identity()
+    restaurant = Restaurant.query.get(rest_id)
+    if not restaurant:
+        return jsonify({"message": "Restaurant not found"}), 404
+    return jsonify(restaurant.to_dict()), 200
 
 @app.route('/api/restaurant/delete', methods=['DELETE'])
 @jwt_required()
@@ -550,7 +558,7 @@ def create_dish():
     except Exception as e:
         print(e)
         return jsonify({"message": "Error creating dish please ensure all required fields are filled."}), 500
-    
+
 @app.route('/api/get_all_dishes',methods=['GET'])
 @jwt_required()
 def get_dishes(rest_id):
