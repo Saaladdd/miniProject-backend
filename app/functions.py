@@ -6,16 +6,17 @@ import hashlib
 import os
 import string
 import random
+from datetime import datetime
 
-def save_message(user_id, rest_id, role, content):
+def save_message(user_id, rest_id,session_id, role, content):
     try:
-        db.session.add(Conversation(user_id=user_id, rest_id=rest_id, role=role, content=content))
+        db.session.add(Conversation(user_id=user_id, rest_id=rest_id, role=role, content=content,session_id = session_id))
         db.session.commit()
     except:
         db.session.rollback()
 
-def get_conversation_history(user_id,rest_id):
-    conversations = Conversation.query.filter_by(user_id=user_id,rest_id=rest_id).all()
+def get_conversation_history(user_id,rest_id,session_id):
+    conversations = Conversation.query.filter_by(user_id=user_id,rest_id=rest_id,session_id=session_id).all()
     return [{"role": convo.role, "content": convo.content} for convo in conversations]
 
 def get_restaurant_details(rest_id: int) -> str:
@@ -30,54 +31,86 @@ def get_restaurant_details(rest_id: int) -> str:
         
     return rest_description
 
-def get_filtered_menu_for_chatbot(menu_id, user_id):
-    all_dishes = Dish.query.filter_by(menu_id=menu_id).all()
-    filtered_dish_ids = sort_user_preferences(user_id, menu_id)
-    filtered_dishes = [dish for dish in all_dishes if dish in filtered_dish_ids]
-    filtered_menu_for_chatbot = "Here is the menu based on your preferences:\n\n"
-    for dish in filtered_dishes:
-        filtered_menu_for_chatbot += (
-            f"ID: {dish.id}\n"
-            f"Dish Name: {dish.dish_name}\n"
-            f"Description: {dish.description or 'No description available'}\n"
-            f"Price: ${dish.price:.2f}\n"
-            f"Protein: {dish.protein}g, Fat: {dish.fat}g, Carbs: {dish.carbs}g, Energy: {dish.energy} kcal\n"
-            f"Special Attributes: "
-            f"{'Lactose-Free' if dish.is_lactose_free else 'Not Lacto-Free'} "
-            f"{'Halal' if dish.is_halal else 'Not Halal'} "
-            f"{'Vegan' if dish.is_vegan else 'Not Vegan'} "
-            f"{'Vegetarian' if dish.is_vegetarian else 'Vegetarian'} "
-            f"{'Gluten-Free' if dish.is_gluten_free else 'Not Gluten-Free'} "
-            f"{'Jain' if dish.is_jain else 'Not Jain'} "
-            f"{'Soy-Free' if dish.is_soy_free else 'Not Soy-Free'}\n"
-            f"Available: {'Yes' if dish.is_available else 'No'}\n\n"
+def get_filtered_menu_for_chatbot(rest_id, user_id):
+    menus = Menu.query.filter_by(restaurant_id=rest_id).all()
+    menu_details = "Here is the menu based on your preferences:\n\n"
+    for menu in menus:
+        menu_details += (
+            f"Menu ID: {menu.id}\n"
+            f"Menu Name: {menu.menu_name or 'No name provided'}\n"
+            f"Menu Description: {menu.description or 'No description available'}\n\n"
         )
-    return filtered_menu_for_chatbot.strip()
+        
+        all_dishes = Dish.query.filter_by(menu_id=menu.id).all()
+ 
+        filtered_dish_ids = sort_user_preferences(user_id, menu.id)
 
-def get_menu_for_chatbot(menu_id, user_id):
-    menu = Menu.query.filter_by(id=menu_id).first()
-    if not menu:
-        return "Menu not found."
-    all_dishes = Dish.query.filter_by(menu_id=menu_id).all()
-    menu_for_chatbot = "Here is the unfiltered menu:\n\n"
-    for dish in all_dishes:
-        menu_for_chatbot += (
-            f"ID: {dish.id}\n"
-            f"Dish Name: {dish.dish_name}\n"
-            f"Description: {dish.description or 'No description available'}\n"
-            f"Price: ${dish.price:.2f}\n"
-            f"Protein: {dish.protein}g, Fat: {dish.fat}g, Carbs: {dish.carbs}g, Energy: {dish.energy} kcal\n"
-            f"Special Attributes: "
-            f"{'Lactose-Free' if dish.is_lactose_free else 'Not Lacto-Free'} "
-            f"{'Halal' if dish.is_halal else 'Not Halal'} "
-            f"{'Vegan' if dish.is_vegan else 'Not Vegan'} "
-            f"{'Vegetarian' if dish.is_vegetarian else 'Vegetarian'} "
-            f"{'Gluten-Free' if dish.is_gluten_free else 'Not Gluten-Free'} "
-            f"{'Jain' if dish.is_jain else 'Not Jain'} "
-            f"{'Soy-Free' if dish.is_soy_free else 'Not Soy-Free'}\n"
-            f"Available: {'Yes' if dish.is_available else 'No'}\n\n"
+        filtered_dishes = [dish for dish in all_dishes if dish.id in filtered_dish_ids]
+        
+        if not filtered_dishes:
+            menu_details += "No dishes available for this menu based on your preferences.\n\n"
+            continue
+        
+        for dish in filtered_dishes:
+            menu_details += (
+                f"  Dish ID: {dish.id}\n"
+                f"  Dish Name: {dish.dish_name}\n"
+                f"  Description: {dish.description or 'No description available'}\n"
+                f"  Price: ${dish.price:.2f}\n"
+                f"  Protein: {dish.protein}g, Fat: {dish.fat}g, Carbs: {dish.carbs}g, Energy: {dish.energy} kcal\n"
+                f"  Special Attributes: "
+                f"{'Lactose-Free' if dish.is_lactose_free else 'Not Lacto-Free'}, "
+                f"{'Halal' if dish.is_halal else 'Not Halal'}, "
+                f"{'Vegan' if dish.is_vegan else 'Not Vegan'}, "
+                f"{'Vegetarian' if dish.is_vegetarian else 'Vegetarian'}, "
+                f"{'Gluten-Free' if dish.is_gluten_free else 'Not Gluten-Free'}, "
+                f"{'Jain' if dish.is_jain else 'Not Jain'}, "
+                f"{'Soy-Free' if dish.is_soy_free else 'Not Soy-Free'}\n"
+                f"  Available: {'Yes' if dish.is_available else 'No'}\n\n"
+            )
+    return menu_details.strip()
+
+def get_menu_for_chatbot(rest_id):
+    
+    menus = Menu.query.filter_by(restaurant_id=rest_id).all()
+    
+    if not menus:
+        return "No menus found for this restaurant."
+  
+    menu_details = "Here are all the menus and their dishes for this restaurant:\n\n"
+    
+    for menu in menus:
+       
+        menu_details += (
+            f"Menu ID: {menu.id}\n"
+            f"Menu Name: {menu.menu_name or 'Unnamed Menu'}\n"
+            f"Menu Description: {menu.description or 'No description available'}\n\n"
         )
-    return menu_for_chatbot.strip()
+        all_dishes = Dish.query.filter_by(menu_id=menu.id).all()
+        
+        if not all_dishes:
+            menu_details += "  No dishes available for this menu.\n\n"
+            continue
+        
+        for dish in all_dishes:
+            menu_details += (
+                f"  Dish ID: {dish.id}\n"
+                f"  Dish Name: {dish.dish_name}\n"
+                f"  Description: {dish.description or 'No description available'}\n"
+                f"  Price: ${dish.price:.2f}\n"
+                f"  Protein: {dish.protein}g, Fat: {dish.fat}g, Carbs: {dish.carbs}g, Energy: {dish.energy} kcal\n"
+                f"  Special Attributes: "
+                f"{'Lactose-Free' if dish.is_lactose_free else 'Not Lacto-Free'}, "
+                f"{'Halal' if dish.is_halal else 'Not Halal'}, "
+                f"{'Vegan' if dish.is_vegan else 'Not Vegan'}, "
+                f"{'Vegetarian' if dish.is_vegetarian else 'Vegetarian'}, "
+                f"{'Gluten-Free' if dish.is_gluten_free else 'Not Gluten-Free'}, "
+                f"{'Jain' if dish.is_jain else 'Not Jain'}, "
+                f"{'Soy-Free' if dish.is_soy_free else 'Not Soy-Free'}\n"
+                f"  Available: {'Yes' if dish.is_available else 'No'}\n\n"
+            )
+    
+    return menu_details.strip()
 
 def get_user_desc_string(user_id):
     preferences = Preferences.query.filter_by(user_id=user_id).all()
@@ -120,8 +153,8 @@ def sort_user_preferences(user_id,menu_id):
     return updated_menu
 
 def generate_session_id(user_id):
-    random_bytes = secrets.token_bytes(4)
-    session_id = f"{user_id}-{base64.urlsafe_b64encode(random_bytes).decode()}"
+    raw_id = f"{user_id}{int(datetime.utcnow().timestamp())}"
+    session_id = int(hashlib.md5(raw_id.encode()).hexdigest(), 16) % (10**7)
     return session_id
 
 def hash_filename(filename):

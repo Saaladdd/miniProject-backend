@@ -5,30 +5,30 @@ from app import db
 from app.functions import get_user_desc_string, get_conversation_history, save_message, get_menu_for_chatbot, get_filtered_menu_for_chatbot, get_restaurant_details 
 
     
-def chatbot_chat(user_id: int, rest_id: int, menu_id: int, user_input: str, api_key):
+def chatbot_chat(user_id: int, rest_id: int, user_input: str, session_id: int, api_key):
     
     client = OpenAI(api_key=api_key)
 
     user = User.query.filter_by(id=user_id).first()
     user_description = user.user_description
 
-    history = get_conversation_history(user_id, rest_id)
+    history = get_conversation_history(user_id, rest_id,session_id)
 
-    filtered_menu = get_filtered_menu_for_chatbot(menu_id, user_id)
-    unfiltered_menu = get_menu_for_chatbot(menu_id, user_id)
+    filtered_menu = get_filtered_menu_for_chatbot(rest_id, user_id)
+    unfiltered_menu = get_menu_for_chatbot(rest_id)
     restaurant_details = get_restaurant_details(rest_id)
 
     messages = [
         {
             "role": "system",
             "content": """
-                You are a restaurant assistant chatbot that interacts with users. Use past chat history, user preferences, and provided restaurant and menu details to offer recommendations specific to the restaurant the user is currently dining at. Be attentive to allergies and user preferences, and never suggest items that don’t align with these. Stay on topic, be friendly, use the customer’s name if needed, and respond in JSON format.
-                Instructions for JSON Output:
+                You are a restaurant assistant chatbot that interacts with users. Use past chat history, user preferences, and provided restaurant and menu details to offer recommendations specific to the restaurant the user is currently dining at. Be attentive to allergies and user preferences, and never suggest items that don’t align with these. Stay on topic, be friendly.
+                Instructions for Output:
                 Use "reply" for text responses.
                 When recommending dishes, use the key "dishes" with a list of dish_id values only.
                 When no dish details are required, use only the "text" key.
                 If a user requests a cuisine different from the restaurant’s main cuisine (e.g., Italian items at a Chinese restaurant), carefully search the menu and suggest relevant items if available.
-                Whenever you include the dish name, always include the dish dish_id with the response text in JSON.
+                Whenever you include the dish name, always include the dish_id with the response text in JSON.
                 If menu is requested send the dish_id's as a list with key as dishes with a text reponse.
                 If the user asks to order any dish ALWAYS return the dish ids too.
             """
@@ -39,7 +39,7 @@ def chatbot_chat(user_id: int, rest_id: int, menu_id: int, user_input: str, api_
         {"role": "system", "content": f"The unfiltered menu is: {unfiltered_menu}"},
         {
         "role": "system",
-        "content": """If dishes are not required return None
+        "content": """If dishes are not required return None.
                     Every response must be of this format donot use ANY other formats:
                     {\"text\": \"Sure, here are the sweet dishes:\", \"dishes\": [{\"dish_id\": 1}, {\"dish_id\": 2}, {\"dish_id\": 3}]}
                     """
@@ -67,8 +67,8 @@ def chatbot_chat(user_id: int, rest_id: int, menu_id: int, user_input: str, api_
     except Exception as e:
         return jsonify({"error": "An error occurred while processing your request.", "details": str(e)}), 500
         
-    save_message(user_id,rest_id, "user",user_input)
-    save_message(user_id,rest_id,"assistant",response)
+    save_message(user_id,rest_id,session_id, "user",user_input)
+    save_message(user_id,rest_id,session_id,"assistant",response)
     return jsonify({"reply":response}),200
 
 def create_user_description(user_id: int, api_key: str) -> str:

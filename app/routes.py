@@ -619,9 +619,14 @@ def get_user_menu( menu_id):
 def start_order(rest_id):
     user_id = get_jwt_identity()
     session_id = generate_session_id(user_id)
+    user = User.query.get(user_id)
     existing_session = Order.query.filter_by(session_id=session_id).first()
+    
     if not existing_session:
         try:
+            for order in user.orders:
+                order.status = False
+                db.session.flush()
             new_order = Order(user_id=user_id, session_id=session_id, restaurant_id=rest_id, status=True)
             db.session.add(new_order)
             db.session.commit()
@@ -638,7 +643,8 @@ def start_order(rest_id):
 def create_order(session_id):
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
-    active_order = next((order for order in user.orders if order.status), None)
+    active_order = next((order for order in user.orders if order.status == True), None)
+    print(active_order)
     if not active_order or active_order.session_id != session_id:
         return jsonify({"message": "Invalid Session"}), 403
     data = request.json 
@@ -687,6 +693,8 @@ def end_order(session_id):
 @jwt_required()
 def chat(rest_id):
     user_id = get_jwt_identity()
+    data = request.json
+    session_id = data.get('session_id')
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"message": "User not found"}), 404
@@ -695,14 +703,10 @@ def chat(rest_id):
     user_input = data.get('user_input')
     try:
 
-        chat_response_tuple = chatbot_chat(user_id, rest_id, menu, user_input, app.config['OPENAI_API_KEY'])
+        chat_response_tuple = chatbot_chat(user_id, rest_id, menu, user_input,session_id, app.config['OPENAI_API_KEY'])
         chat_response = chat_response_tuple[0]
-        response_data = chat_response.get_json() 
     
-        chat_reply = response_data.get("reply")
-        
-        if isinstance(chat_reply, str):
-            chat_reply = json.loads(chat_reply)
+        chat_reply = json.loads(chat_response.get_json().get("reply", "{}"))
 
         if not isinstance(chat_reply, dict):
             return jsonify({"message": "Invalid reply format", "error": "Expected a dictionary"}), 400

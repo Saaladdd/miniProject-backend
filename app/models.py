@@ -168,6 +168,7 @@ class Conversation(db.Model):
     rest_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', name='fk_chat_history_rest_id', ondelete='CASCADE'), nullable=False)
     role = db.Column(db.String(20), nullable=False)
     content = db.Column(db.String(50), nullable=False)
+    session_id = db.Column(db.Integer, db.ForeignKey('orders.session_id', name='fk_chat_history_session_id', ondelete='CASCADE'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now(ist))
 
     def __repr__(self):
@@ -178,17 +179,17 @@ class Order(db.Model):
     __tablename__ = 'orders'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete = 'CASCADE'), nullable=False)
-    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_orders_user_id', ondelete = 'CASCADE'), nullable=False)
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', name='fk_orders_restaurant_id', ondelete='CASCADE'), nullable=False)
     session_id = db.Column(db.Integer, nullable=False,unique=True)
     status = db.Column(db.Boolean, nullable=False)
-    total_cost = db.Column(db.Float, nullable=False)
+    total_cost = db.Column(db.Float, default =0.0)
     timestamp = db.Column(db.DateTime, default=datetime.now(ist))
     
     items = db.relationship('OrderItem', backref='order', lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
-        return (f"Order(id={self.id}, user_id={self.user_id}, restaurant_id={self.restaurant_id},session_id={self.session_id})") 
+        return (f"Order(id={self.id}, user_id={self.user_id}, restaurant_id={self.restaurant_id},session_id={self.session_id},status={self.status},total_cost={self.total_cost},timestamp={self.timestamp})") 
 
 class OrderItem(db.Model):
     __tablename__ = 'order_items'
