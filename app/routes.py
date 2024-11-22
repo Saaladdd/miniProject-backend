@@ -574,7 +574,10 @@ def get_dishes(rest_id):
     dishes = Dish.query.filter_by(restaurant_id=rest_id).all()
     if not dishes:
         return jsonify({"message": "Dishes not found"}), 404
-    return jsonify({"dishes": [dish.to_dict() for dish in dishes]})
+    dishes = [dish.to_dict() for dish in dishes]
+    for dish in dishes:
+        dish['image'] = return_link(dish.image)
+    return jsonify({"dishes": dishes })
 
 @app.route('/api/dish/<int:dish_id>', methods=['GET'])
 def get_dish(dish_id):
@@ -583,7 +586,7 @@ def get_dish(dish_id):
         return jsonify({"message": "Dish not found"}), 404
     dishes = dish.to_dict()
     dishes['image'] = return_link(dish.image)
-    return jsonify(dishes)
+    return jsonify({"dishes":dishes}), 200
 
 
 @app.route('/api/add_to_menu',methods=['POST'])
