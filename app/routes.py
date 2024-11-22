@@ -1,7 +1,7 @@
 from flask import jsonify, request, json, send_file
 import os
 from app import app, db
-from app.models import User, Preferences, Restaurant, Menu, Dish, Theme, Order, OrderItem, Conversation, Favorites
+from app.models import User, Preferences, Restaurant, Menu, Dish, Theme, Order, OrderItem, Conversation, Favorites, Conversation
 from ai import create_user_description,chatbot_chat
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, JWTManager, get_jwt
@@ -689,6 +689,23 @@ def end_order(session_id):
         db.session.rollback()
         return jsonify({"message": "Error processing order", "error": str(e)}), 500
     
+@app.route('/api/chat/get/<int:rest_id>', methods=['GET'])
+@jwt_required()
+def get_chat(rest_id):
+    user_id = get_jwt_identity()
+    session_id = request.args.get('session_id')
+    if not session_id:
+        return jsonify({"message": "Missing session_id"}), 400
+    try:
+        chats = Conversation.query.filter_by(session_id=session_id, user_id=user_id).all()
+        if not chats:
+            return jsonify({"message": "No chats found"}), 404
+        chat_list = [chat.to_dict() for chat in chats]
+    except Exception as e:
+        return jsonify({"message": "Error processing chat", "error": str(e)}), 500
+
+    return jsonify({"chats": chat_list}), 200
+    
 @app.route('/api/chat/<int:rest_id>', methods=['POST'])
 @jwt_required()
 def chat(rest_id):
@@ -699,14 +716,18 @@ def chat(rest_id):
     if not user:
         return jsonify({"message": "User not found"}), 404
     data = request.get_json()
-    menu = data.get('menu_id')
     user_input = data.get('user_input')
     try:
-
-        chat_response_tuple = chatbot_chat(user_id, rest_id, menu, user_input,session_id, app.config['OPENAI_API_KEY'])
-        chat_response = chat_response_tuple[0]
-    
-        chat_reply = json.loads(chat_response.get_json().get("reply", "{}"))
+        try:
+            chat_response_tuple = chatbot_chat(user_id, rest_id, user_input,session_id, app.config['OPENAI_API_KEY'])
+            print(chat_response_tuple)
+            chat_response = chat_response_tuple[0]
+            print(chat_response)
+        
+            chat_reply = json.loads(chat_response.get_json().get("reply", "{}"))
+            print(chat_reply)
+        except Exception as e: 
+            return jsonify({"message": "Error with chat", "error": str(e)}), 500
 
         if not isinstance(chat_reply, dict):
             return jsonify({"message": "Invalid reply format", "error": "Expected a dictionary"}), 400
