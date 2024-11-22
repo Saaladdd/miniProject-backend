@@ -29,6 +29,7 @@ def chatbot_chat(user_id: int, rest_id: int, user_input: str, session_id: int, a
             3.If menu is requested, return a list of dish_ids under "dishes".
             4.If ordering, always return dish_ids too.
             5.If no dishes are needed, return only the "text" key  
+            6.Don't use markup tags.
         """
     },
     {"role": "system", "content": f"The user description is: {user_description}"},
