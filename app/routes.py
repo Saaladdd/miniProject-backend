@@ -6,7 +6,7 @@ from ai import create_user_description,chatbot_chat
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, JWTManager, get_jwt
 from datetime import timedelta
-from app.functions import sort_user_preferences, generate_session_id,hash_filename,generate_random_string
+from app.functions import sort_user_preferences, generate_session_id,hash_filename,generate_random_string,return_link
 from openai import OpenAIError
 from dotenv import load_dotenv
 import openai
@@ -16,18 +16,13 @@ import string
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-def generate_random_string(length):
-    characters = string.ascii_letters + string.digits
-    random_string = ''.join(random.choices(characters, k=length))
-    return random_string
-
-def return_link(filename):
-    return f"http://localhost:5000/uploads/{filename}"
-
 @app.route('/uploads/<path:filename>')
 def serve_image(filename):
-    filename = filename.replace('/','\\')
-    return send_file("..\\"+filename)
+    try:
+        filename = filename.replace('/','\\')
+        return send_file("..\\"+filename)
+    except FileNotFoundError:
+        return jsonify({'error': 'File not found'}), 404
 
 @app.route('/api/user/register', methods=['POST'])
 def register_user():
@@ -135,9 +130,7 @@ def get_user():
             "is_vegetarian": preferences.is_vegetarian if preferences else None,
             "is_allergic_to_gluten": preferences.is_allergic_to_gluten if preferences else None,
             "is_jain": preferences.is_jain if preferences else None,
-        }
-
-        
+        } 
         orders = user.orders[-5:]
         orders_data = [
             {
@@ -149,8 +142,7 @@ def get_user():
             }
             for order in orders
         ]
-
-        
+ 
         favorite_restaurants = [
             {
                 "id": fav.restaurant_id,
@@ -167,7 +159,6 @@ def get_user():
                 [fav.id for fav in Favorites.query.filter_by(user_id=user_id).all()]
             )).all()
         ]
-
 
         conversations = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.created_at.desc()).limit(5).all()
         conversations_data = [
@@ -251,7 +242,8 @@ def edit_user():
         old_photo_filename = user.profile_photo
         if old_photo_filename:
                 os.remove(old_photo_filename)
-        unique_filename = hash_filename(profile_photo)
+        ext = profile_photo.filename.split('.')[-1]
+        unique_filename = f"{generate_random_string(16)}.{ext}"
         image_path = os.path.join(app.config['USER_PROFILE_PICTURE_PATH'], unique_filename)
         os.makedirs(app.config['USER_PROFILE_PICTURE_PATH'], exist_ok=True)
         profile_photo.save(image_path)
@@ -460,6 +452,7 @@ def delete_restaurant(rest_id):
         db.session.rollback()
         return jsonify({"message": e}), 500
 
+
 @app.route('/api/create_menu',methods=['POST'])
 @jwt_required()
 def create_menu():
@@ -580,8 +573,8 @@ def add_to_menu():
     if not dish:
         return jsonify({"message": "Dish not found"}), 404
     menu = Menu.query.get(menu_id)
-    if not menu:
-        return jsonify({"message": "Menu not found"}), 404
+    if not menu or menu.restaurant_id != rest_id:
+        return jsonify({"message": "Menu not found or unauthorized"}), 404
     if dish.menu_id == menu_id:
         return jsonify({"message": "Dish is already in the specified menu"}), 400
     try:
@@ -621,14 +614,22 @@ def get_user_menu( menu_id):
     else:
         return jsonify({"dishes": [dish.to_dict() for dish in sorted_dishes]})
 
-@app.route('/api/start_order', methods=['GET'])
+@app.route('/api/start_order/<int:rest_id>', methods=['GET'])
 @jwt_required()
-def start_order():
+def start_order(rest_id):
     user_id = get_jwt_identity()
     while True:
         session_id = generate_session_id(user_id)
         existing_session = Order.query.filter_by(session_id=session_id).first()
         if not existing_session:
+            try:
+                new_order = Order(user_id=user_id, session_id=session_id, restaurant_id=rest_id, status=True)
+                db.session.add(new_order)
+                db.session.commit()
+            except Exception as e: 
+                db.session.rollback()
+                print(e)
+                return jsonify({"message": str(e)}), 500
             return jsonify(session_id=session_id)
 
 @app.route('/api/<int:session_id>/order', methods=['POST'])
@@ -636,19 +637,16 @@ def start_order():
 def create_order(session_id):
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
-    actual_session_id = next((orders.session_id for orders in user.orders if order.status == 1),None)
-    if actual_session_id != session_id:
-        return jsonify({"message": "Invalid Session"}),403
+    active_order = next((order for order in user.orders if order.status), None)
+    if not active_order or active_order.session_id != session_id:
+        return jsonify({"message": "Invalid Session"}), 403
     data = request.json 
     items = data.get('items', [])
-    total_cost = Order.query.filter_by(session_id=session_id).first().total_cost
     if not items:
         return jsonify({"message": "No items provided"}), 400
     try:
-        order = Order.query.get(session_id)
-        if not order:
-            order = Order(session_id=session_id,status =True)
-            db.session.add(order)
+        order = Order.query.filter_by(session_id=session_id).first()
+        total_cost = order.total_cost
         if order.status == False:
             return jsonify({"message": "Invalid Session"}),403
         for item in items:
@@ -680,7 +678,7 @@ def end_order(session_id):
     
 @app.route('/api/chat/<int:rest_id>', methods=['POST'])
 @jwt_required()
-def chat( rest_id):
+def chat(rest_id):
     user_id = get_jwt_identity()
     user = db.session.get(User, user_id)
     if not user:

@@ -135,3 +135,6 @@ def generate_random_string(length):
     characters = string.ascii_letters + string.digits
     random_string = ''.join(random.choices(characters, k=length))
     return random_string
+
+def return_link(filename):
+    return f"http://localhost:5000/uploads/{filename}"
