@@ -123,14 +123,18 @@ def get_user():
         
         preferences = Preferences.query.filter_by(user_id=user_id).first()
         preferences_data = {
-            "preference": preferences.preference if preferences else None,
             "is_lactose_intolerant": preferences.is_lactose_intolerant if preferences else None,
             "is_halal": preferences.is_halal if preferences else None,
             "is_vegan": preferences.is_vegan if preferences else None,
             "is_vegetarian": preferences.is_vegetarian if preferences else None,
             "is_allergic_to_gluten": preferences.is_allergic_to_gluten if preferences else None,
             "is_jain": preferences.is_jain if preferences else None,
-        } 
+        }
+
+        other_preferences_data = {
+            "preference": preferences.preference if preferences else None,
+        }
+        
         orders = user.orders[-5:]
         orders_data = [
             {
@@ -142,7 +146,8 @@ def get_user():
             }
             for order in orders
         ]
- 
+
+        
         favorite_restaurants = [
             {
                 "id": fav.restaurant_id,
@@ -160,6 +165,7 @@ def get_user():
             )).all()
         ]
 
+
         conversations = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.created_at.desc()).limit(5).all()
         conversations_data = [
             {
@@ -175,6 +181,7 @@ def get_user():
         response = {
             "user": user.to_dict(),
             "preferences": preferences_data,
+            "other_preferences": other_preferences_data,
             "orders": orders_data,
             "favorites": {
                 "restaurants": favorite_restaurants,
@@ -188,6 +195,7 @@ def get_user():
 
     except Exception as e:
         return jsonify({'message': str(e)}), 500
+
     
 
 @app.route('/api/user/login', methods=['POST'])
@@ -596,7 +604,7 @@ def add_to_menu():
 
 @app.route('/api/get_menu/<int:menu_id>',methods=['GET'])
 @jwt_required()
-def get_restaurant_menu(rest_id,menu_id):
+def get_restaurant_menu(menu_id):
     rest_id = get_jwt_identity()
     menu = Menu.query.filter_by(restaurant_id=rest_id, id=menu_id).first()
     if not menu:
@@ -732,7 +740,7 @@ def chat(rest_id):
             chat_response_tuple = chatbot_chat(user_id, rest_id, user_input,session_id, app.config['OPENAI_API_KEY'])
             print(chat_response_tuple)
             chat_response = chat_response_tuple[0]
-            print(chat_response)
+            print(chat_response.json)
         
             chat_reply = json.loads(chat_response.get_json().get("reply", "{}"))
             print(chat_reply)

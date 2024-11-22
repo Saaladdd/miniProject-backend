@@ -8,6 +8,7 @@ import string
 import random
 from datetime import datetime
 import re
+import tiktoken
 
 def save_message(user_id, rest_id,session_id, role, content):
     try:
@@ -38,8 +39,7 @@ def get_filtered_menu_for_chatbot(rest_id, user_id):
     for menu in menus:
         menu_details += (
             f"Menu ID: {menu.id}\n"
-            f"Menu Name: {menu.menu_name or 'No name provided'}\n"
-            f"Menu Description: {menu.description or 'No description available'}\n\n"
+            f"Menu Name: {menu.menu_type or 'No name provided'}\n\n"
         )
         
         all_dishes = Dish.query.filter_by(menu_id=menu.id).all()
@@ -84,8 +84,7 @@ def get_menu_for_chatbot(rest_id):
        
         menu_details += (
             f"Menu ID: {menu.id}\n"
-            f"Menu Name: {menu.menu_name or 'Unnamed Menu'}\n"
-            f"Menu Description: {menu.description or 'No description available'}\n\n"
+            f"Menu Name: {menu.menu_type or 'Unnamed Menu'}\n\n"
         )
         all_dishes = Dish.query.filter_by(menu_id=menu.id).all()
         
@@ -178,3 +177,15 @@ def format_response(response):
     if match:
         text_value = match.group(1)
     return text_value
+
+def count_tokens(messages, model="gpt-4o"):
+    """Count the number of tokens in the message list using the OpenAI tokenizer."""
+    # Initialize tokenizer
+    tokenizer = tiktoken.get_encoding("gpt2" if model == "gpt-4o" else "cl100k_base")
+    
+    # Count tokens for each message
+    total_tokens = 0
+    for message in messages:
+        total_tokens += len(tokenizer.encode(message["content"]))
+    
+    return total_tokens
