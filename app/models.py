@@ -145,7 +145,13 @@ class Dish(db.Model):
             "is_available": self.is_available,
             "image": self.image
         }
-
+    
+    def image_and_name(self):
+        return {
+            "image": self.image,
+            "name": self.dish_name
+        }
+    
 class Theme(db.Model):
     __tablename__ = 'theme'
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', name='fk_theme_restaurant_id', ondelete='CASCADE'), nullable=False)

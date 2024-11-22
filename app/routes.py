@@ -579,12 +579,13 @@ def get_dishes(rest_id):
         dish['image'] = return_link(dish.image)
     return jsonify({"dishes": dishes })
 
+
 @app.route('/api/dish/<int:dish_id>', methods=['GET'])
 def get_dish(dish_id):
     dish = Dish.query.get(dish_id)
     if not dish:
         return jsonify({"message": "Dish not found"}), 404
-    dishes = dish.to_dict()
+    dishes = dish.image_and_name()
     dishes['image'] = return_link(dish.image)
     return jsonify({"dishes":dishes}), 200
 
