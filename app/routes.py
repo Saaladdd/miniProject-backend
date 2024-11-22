@@ -618,19 +618,20 @@ def get_user_menu( menu_id):
 @jwt_required()
 def start_order(rest_id):
     user_id = get_jwt_identity()
-    while True:
-        session_id = generate_session_id(user_id)
-        existing_session = Order.query.filter_by(session_id=session_id).first()
-        if not existing_session:
-            try:
-                new_order = Order(user_id=user_id, session_id=session_id, restaurant_id=rest_id, status=True)
-                db.session.add(new_order)
-                db.session.commit()
-            except Exception as e: 
-                db.session.rollback()
-                print(e)
-                return jsonify({"message": str(e)}), 500
-            return jsonify(session_id=session_id)
+    session_id = generate_session_id(user_id)
+    existing_session = Order.query.filter_by(session_id=session_id).first()
+    if not existing_session:
+        try:
+            new_order = Order(user_id=user_id, session_id=session_id, restaurant_id=rest_id, status=True)
+            db.session.add(new_order)
+            db.session.commit()
+        except Exception as e: 
+            db.session.rollback()
+            print(e)
+            return jsonify({"message": str(e)}), 500
+        return jsonify(session_id=session_id)
+    else:
+        return jsonify({"message": "Try again"}), 400
 
 @app.route('/api/<int:session_id>/order', methods=['POST'])
 @jwt_required()
@@ -659,7 +660,8 @@ def create_order(session_id):
             total_cost += (Dish.query.get(dish_id).price)*quantity
             order_item = OrderItem(order_id=order.id, dish_id=dish_id, quantity=quantity, price=(Dish.query.get(dish_id).price)*quantity)
             db.session.add(order_item)
-            Order.query.filter_by(session_id=session_id).update({'total_cost': total_cost})
+
+        order.total_cost = total_cost 
         db.session.commit()
         return jsonify({"message": "Order created successfully"}), 201
     except Exception as e:
@@ -669,12 +671,17 @@ def create_order(session_id):
 @app.route('/api/end_order/<int:session_id>', methods=['POST'])
 @jwt_required()
 def end_order(session_id):
-    order = Order.query.get(session_id)
+    user_id = get_jwt_identity()
+    order = Order.query.filter_by(session_id=session_id,user_id=user_id).first()
     if not order:
         return jsonify({"message": "Order not found"}), 404
-    order.status = False
-    db.session.commit()
-    return jsonify({"message": "Order completed successfully"}), 200
+    try:
+        order.status = False
+        db.session.commit()
+        return jsonify({"message": "Order completed successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Error processing order", "error": str(e)}), 500
     
 @app.route('/api/chat/<int:rest_id>', methods=['POST'])
 @jwt_required()
