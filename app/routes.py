@@ -614,7 +614,7 @@ def get_user_menu( menu_id):
     else:
         return jsonify({"dishes": [dish.to_dict() for dish in sorted_dishes]})
 
-@app.route('/api/start_order/<int:rest_id>', methods=['GET'])
+@app.route('/api/start_order/<int:rest_id>', methods=['POST'])
 @jwt_required()
 def start_order(rest_id):
     user_id = get_jwt_identity()
