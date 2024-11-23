@@ -1,7 +1,7 @@
 from flask import jsonify, request, json, send_file
 import os
 from app import app, db
-from app.models import User, Preferences, Restaurant, Menu, Dish, Theme, Order, OrderItem, Conversation, Favorites, Conversation
+from app.models import User, Preferences, Restaurant, Menu, Dish, Theme, Order, OrderItem, Conversation, Favorites, Conversation,Cart,CartItem
 from ai import create_user_description,chatbot_chat
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, JWTManager, get_jwt
@@ -658,7 +658,8 @@ def start_order(rest_id):
                 order.status = False
                 db.session.flush()
             new_order = Order(user_id=user_id, session_id=session_id, restaurant_id=rest_id, status=True)
-            db.session.add(new_order)
+            new_cart = Cart(user_id=user_id, session_id=session_id)
+            db.session.add(new_order,new_cart)
             db.session.commit()
         except Exception as e: 
             db.session.rollback()
@@ -673,19 +674,32 @@ def start_order(rest_id):
 def create_order(session_id):
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
+    
+    # Find the active order
     active_order = next((order for order in user.orders if order.status == True), None)
     print(active_order)
+
+    # If no active order or session_id does not match, return error
     if not active_order or active_order.session_id != session_id:
         return jsonify({"message": "Invalid Session"}), 403
+    
+    # Retrieve items from the request
     data = request.json 
     items = data.get('items', [])
+    
+    # If no items provided, return error
     if not items:
         return jsonify({"message": "No items provided"}), 400
+    
+    # Find the cart for the session
+    cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
+    if not cart:
+        return jsonify({"message": "No cart found for this session"}), 404
+
     try:
-        order = Order.query.filter_by(session_id=session_id).first()
-        total_cost = order.total_cost
-        if order.status == False:
-            return jsonify({"message": "Invalid Session"}),403
+        total_cost = 0.0
+        
+        # Add items to the cart
         for item in items:
             dish_id = item.get('dish_id')
             quantity = item.get('quantity')
@@ -693,16 +707,50 @@ def create_order(session_id):
             if not all([dish_id, quantity]):
                 return jsonify({"message": "Item data is incomplete"}), 400
             
-            total_cost += (Dish.query.get(dish_id).price)*quantity
-            order_item = OrderItem(order_id=order.id, dish_id=dish_id, quantity=quantity, price=(Dish.query.get(dish_id).price)*quantity)
-            db.session.add(order_item)
+            # Check if the dish exists
+            dish = Dish.query.get(dish_id)
+            if not dish:
+                return jsonify({"message": f"Dish with ID {dish_id} not found"}), 404
 
-        order.total_cost = total_cost 
+            # Calculate total cost for the cart
+            price = dish.price * quantity
+            cart_item = CartItem(cart_id=cart.id, dish_id=dish_id, quantity=quantity, price=price)
+            db.session.add(cart_item)
+            total_cost += price
+        
+        # Update cart's total cost
+        cart.total_cost = total_cost
         db.session.commit()
+
+        # Once the cart is populated, create the order and transfer cart items to the order
+        order = Order(
+            user_id=user_id,
+            restaurant_id=active_order.restaurant_id,
+            session_id=session_id,
+            status=True,  # Mark as active order
+            total_cost=total_cost
+        )
+        db.session.add(order)
+        db.session.commit()  # Save the new order
+
+        # Transfer items from cart to order
+        for cart_item in cart.items:
+            order_item = OrderItem(order_id=order.id, dish_id=cart_item.dish_id, 
+                                   quantity=cart_item.quantity, price=cart_item.price)
+            db.session.add(order_item)
+        
+        # Commit everything
+        db.session.commit()
+
+        # Clear the cart after order creation
+        db.session.delete(cart)
+        db.session.commit()
+
         return jsonify({"message": "Order created successfully"}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Error processing order", "error": str(e)}), 500
+
     
 @app.route('/api/end_order/<int:session_id>', methods=['POST'])
 @jwt_required()

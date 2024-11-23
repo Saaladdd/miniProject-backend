@@ -192,17 +192,19 @@ class Order(db.Model):
     __tablename__ = 'orders'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_orders_user_id', ondelete = 'CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_orders_user_id', ondelete='CASCADE'), nullable=False)
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', name='fk_orders_restaurant_id', ondelete='CASCADE'), nullable=False)
-    session_id = db.Column(db.Integer, nullable=False,unique=True)
+    session_id = db.Column(db.Integer, nullable=False, unique=True)
     status = db.Column(db.Boolean, nullable=False)
-    total_cost = db.Column(db.Float, default =0.0)
+    total_cost = db.Column(db.Float, default=0.0)
     timestamp = db.Column(db.DateTime, default=datetime.now(ist))
     
     items = db.relationship('OrderItem', backref='order', lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
-        return (f"Order(id={self.id}, user_id={self.user_id}, restaurant_id={self.restaurant_id},session_id={self.session_id},status={self.status},total_cost={self.total_cost},timestamp={self.timestamp})") 
+        return (f"Order(id={self.id}, user_id={self.user_id}, restaurant_id={self.restaurant_id}, "
+                f"session_id={self.session_id}, status={self.status}, total_cost={self.total_cost}, "
+                f"timestamp={self.timestamp})")
 
 class OrderItem(db.Model):
     __tablename__ = 'order_items'
@@ -214,4 +216,28 @@ class OrderItem(db.Model):
     price = db.Column(db.Float, nullable=False)
 
     def __repr__(self):
-        return (f"<OrderItem(id={self.id}, order_id={self.order_id}, dish_id={self.dish_id}")
+        return f"<OrderItem(id={self.id}, order_id={self.order_id}, dish_id={self.dish_id}, quantity={self.quantity}, price={self.price})>"
+
+class Cart(db.Model):
+    __tablename__ = 'cart'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_cart_user_id', ondelete='CASCADE'), nullable=False)
+    session_id = db.Column(db.Integer, db.ForeignKey('orders.session_id', name='fk_cart_session_id', ondelete='CASCADE'), nullable=False)
+    items = db.relationship('CartItem', backref='cart', lazy=True, cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"Cart(id={self.id}, user_id={self.user_id}, session_id={self.session_id}, items_count={len(self.items)})"
+
+class CartItem(db.Model):
+    __tablename__ = 'cart_items'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    cart_id = db.Column(db.Integer, db.ForeignKey('cart.id',name='fk_cart_id', ondelete='CASCADE'), nullable=False)
+    dish_id = db.Column(db.Integer, db.ForeignKey('dish.id', name = 'fk_cart_dish_name'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Float, nullable=False)
+
+    def __repr__(self):
+        return (f"<CartItem(id={self.id}, cart_id={self.cart_id}, dish_id={self.dish_id}, "
+                f"quantity={self.quantity}, price={self.price})>")
