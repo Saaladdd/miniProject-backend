@@ -212,7 +212,7 @@ class OrderItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False)
     dish_id = db.Column(db.Integer, db.ForeignKey('dish.id'), nullable=False)
-    quantity = db.Column(db.Integer, nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, default =1)
     price = db.Column(db.Float, nullable=False)
 
     def __repr__(self):
@@ -236,7 +236,7 @@ class CartItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     cart_id = db.Column(db.Integer, db.ForeignKey('cart.id',name='fk_cart_id', ondelete='CASCADE'), nullable=False)
     dish_id = db.Column(db.Integer, db.ForeignKey('dish.id', name = 'fk_cart_dish_name'), nullable=False)
-    quantity = db.Column(db.Integer, nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, default=1)
     price = db.Column(db.Float, nullable=False)
 
     def __repr__(self):
