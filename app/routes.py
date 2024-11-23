@@ -672,7 +672,7 @@ def start_order(rest_id):
     else:
         return jsonify({"message": "Try again"}), 400
 
-@app.route('/api/<int:session_id>/order', methods=['POST'])
+@app.route('/api/<int:session_id>/add_to_cart', methods=['POST'])
 @jwt_required()
 def create_order(session_id):
     user_id = get_jwt_identity()
@@ -725,8 +725,37 @@ def create_order(session_id):
         cart.total_cost = total_cost
         db.session.commit()
 
-
         return jsonify({"message": "Order created successfully"}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Error processing order", "error": str(e)}), 500
+
+@app.route('/api/<int:session_id>/place_order', methods=['GET'])
+@jwt_required()
+def place_order(session_id):
+    user_id = get_jwt_identity()
+    
+    cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
+    if not cart:
+        return jsonify({"message": "Cart not found"}), 404
+    
+    try:
+        
+        order = Order.query.filter_by(session_id=session_id, user_id=user_id).first()
+        order.total_cost += cart.total_cost
+
+        for cart_item in cart.items:
+            order_item = OrderItem(
+                order_id=order.id,
+                dish_id=cart_item.dish_id,
+                quantity=cart_item.quantity,
+                price=cart_item.price
+            )
+            db.session.add(order_item)
+        
+        db.session.commit()
+        
+        return jsonify({"message": "Order placed successfully"}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Error processing order", "error": str(e)}), 500
