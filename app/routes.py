@@ -1,4 +1,4 @@
-from flask import jsonify, request, json, send_file
+from flask import jsonify, request, json, send_file, current_app
 import os
 from app import app, db
 from app.models import User, Preferences, Restaurant, Menu, Dish, Theme, Order, OrderItem, Conversation, Favorites, Conversation,Cart,CartItem
@@ -848,3 +848,38 @@ def chat(rest_id):
         return jsonify({"text": text, "dish_details": dish_details}), 200
     except Exception as e:
         return jsonify({"message": "Error processing chat", "error": str(e)}), 500
+    
+
+
+@app.route('/api/chat/<int:rest_id>/session/<string:session_id>', methods=['GET'])
+@jwt_required()
+def get_chat_session(rest_id, session_id):
+    user_id = get_jwt_identity()
+
+    try:
+        # Query all messages for the given session
+        messages = Conversation.query.filter_by(
+            session_id=session_id,
+            user_id=user_id,
+            rest_id=rest_id
+        ).order_by(Conversation.id.asc()).all()
+
+
+        if not messages:
+            return jsonify({"message": "No messages found for this session"}), 404
+
+        # Format the messages into a response
+        formatted_messages = [
+            {
+                "message_id": message.id,
+                "sender": message.role,
+                "text": message.content
+            }
+            for message in messages
+        ]
+
+        return jsonify({"messages": formatted_messages}), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Unexpected error: {str(e)}")
+        return jsonify({"message": "Unexpected error occurred"}), 500
