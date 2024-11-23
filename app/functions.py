@@ -158,6 +158,7 @@ def generate_session_id(user_id):
     return session_id
 
 def hash_filename(filename):
+    print(filename)
     name, extension = os.path.splitext(filename)
     hash_object = hashlib.md5(name.encode())
     unique_hash = hash_object.hexdigest()

@@ -333,12 +333,13 @@ def register_restaurant():
     profile_picture_path = None
 
     if banner:
-        unique_filename = hash_filename(banner)
-        banner_path = os.path.join(app.config['RESTAURANT_BANNER_PATH'], unique_filename)
+        unique_filename = hash_filename(banner.filename)
+        image_path = os.path.join(app.config['RESTAURANT_BANNER_PATH'], unique_filename)
         os.makedirs(app.config['RESTAURANT_BANNER_PATH'], exist_ok=True)
-        banner.save(banner_path)
+        banner.save(image_path)
+
     if profile_picture:
-        unique_filename = hash_filename(profile_picture)
+        unique_filename = hash_filename(profile_picture.filename)
         profile_picture_path = os.path.join(app.config['RESTAURANT_PROFILE_PICTURE_PATH'], unique_filename)
         os.makedirs(app.config['RESTAURANT_PROFILE_PICTURE_PATH'], exist_ok=True)
         profile_picture.save(profile_picture_path)
@@ -441,12 +442,14 @@ def edit_restaurant():
         return jsonify({"message": str(e)}), 500
     
 @app.route('/api/restaurant/landing/<int:rest_id>',methods=['GET'])
-def get_restaurant():
-    rest_id = get_jwt_identity()
+def get_restaurant(rest_id):
     restaurant = Restaurant.query.get(rest_id)
     if not restaurant:
         return jsonify({"message": "Restaurant not found"}), 404
-    return jsonify(restaurant.to_dict()), 200
+    rest_data = restaurant.to_dict()
+    print(rest_data)
+    rest_data['banner'] = return_link(restaurant.banner)
+    return jsonify(rest_data), 200
 
 @app.route('/api/restaurant/delete', methods=['DELETE'])
 @jwt_required()
