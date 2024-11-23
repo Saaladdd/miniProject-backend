@@ -196,8 +196,6 @@ def get_user():
     except Exception as e:
         return jsonify({'message': str(e)}), 500
 
-    
-
 @app.route('/api/user/login', methods=['POST'])
 def login_user():
     data = request.json
@@ -472,7 +470,6 @@ def delete_restaurant(rest_id):
         db.session.rollback()
         return jsonify({"message": e}), 500
 
-
 @app.route('/api/create_menu',methods=['POST'])
 @jwt_required()
 def create_menu():
@@ -583,7 +580,6 @@ def get_dishes(rest_id):
         dish['image'] = return_link(dish.image)
     return jsonify({"dishes": dishes })
 
-
 @app.route('/api/dish/<int:dish_id>', methods=['GET'])
 def get_dish(dish_id):
     dish = Dish.query.get(dish_id)
@@ -678,23 +674,18 @@ def create_order(session_id):
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
     
-    # Find the active order
     active_order = next((order for order in user.orders if order.status == True), None)
     print(active_order)
 
-    # If no active order or session_id does not match, return error
     if not active_order or active_order.session_id != session_id:
         return jsonify({"message": "Invalid Session"}), 403
     
-    # Retrieve items from the request
     data = request.json 
     items = data.get('items', [])
     
-    # If no items provided, return error
     if not items:
         return jsonify({"message": "No items provided"}), 400
     
-    # Find the cart for the session
     cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
     if not cart:
         return jsonify({"message": "No cart found for this session"}), 404
@@ -702,7 +693,6 @@ def create_order(session_id):
     try:
         total_cost = cart.total_cost
         
-        # Add items to the cart
         for item in items:
             dish_id = item.get('dish_id')
             quantity = item.get('quantity')
@@ -710,18 +700,14 @@ def create_order(session_id):
             if not all([dish_id, quantity]):
                 return jsonify({"message": "Item data is incomplete"}), 400
             
-            # Check if the dish exists
             dish = Dish.query.get(dish_id)
             if not dish:
                 return jsonify({"message": f"Dish with ID {dish_id} not found"}), 404
-
-            # Calculate total cost for the cart
             price = dish.price * quantity
             cart_item = CartItem(cart_id=cart.id, dish_id=dish_id, quantity=quantity, price=price)
             db.session.add(cart_item)
             total_cost += price
         
-        # Update cart's total cost
         cart.total_cost = total_cost
         db.session.commit()
 
@@ -730,6 +716,29 @@ def create_order(session_id):
         db.session.rollback()
         return jsonify({"message": "Error processing order", "error": str(e)}), 500
 
+@app.route('/api/<int:session_id>/delete_from_cart/<int:dish_id>', methods=['DELETE'])
+@jwt_required()
+def delete_from_cart(session_id,dish_id):
+    user_id = get_jwt_identity()
+    
+    cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
+    if not cart:
+        return jsonify({"message": "Cart not found"}), 404
+    
+    try:
+        if not dish_id:
+            return jsonify({"message": "Dish ID not provided"}), 400
+        
+        cart_item = CartItem.query.filter_by(cart_id=cart.id, dish_id=dish_id).first()
+        cart.total_cost -= cart_item.price
+        db.session.delete(cart_item)
+        db.session.commit()
+        
+        return jsonify({"message": "Item deleted from cart successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Error processing order", "error": str(e)}), 500
+    
 @app.route('/api/<int:session_id>/place_order', methods=['GET'])
 @jwt_required()
 def place_order(session_id):
@@ -759,8 +768,7 @@ def place_order(session_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Error processing order", "error": str(e)}), 500
-
-    
+ 
 @app.route('/api/end_order/<int:session_id>', methods=['POST'])
 @jwt_required()
 def end_order(session_id):
@@ -839,30 +847,3 @@ def chat(rest_id):
         return jsonify({"text": text, "dish_details": dish_details}), 200
     except Exception as e:
         return jsonify({"message": "Error processing chat", "error": str(e)}), 500
-
-
-   
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-@app.route('/api/<int:user_id>/<int:menu_id>', methods=['GET'])
-def get_menu(user_id):
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({"message": "User not found"}), 404
