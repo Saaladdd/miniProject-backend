@@ -225,6 +225,7 @@ class Cart(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_cart_user_id', ondelete='CASCADE'), nullable=False)
     session_id = db.Column(db.Integer, db.ForeignKey('orders.session_id', name='fk_cart_session_id', ondelete='CASCADE'), nullable=False)
     items = db.relationship('CartItem', backref='cart', lazy=True, cascade="all, delete-orphan")
+    total_cost = db.Column(db.Float, default=0.0)
 
     def __repr__(self):
         return f"Cart(id={self.id}, user_id={self.user_id}, session_id={self.session_id}, items_count={len(self.items)})"

@@ -697,7 +697,7 @@ def create_order(session_id):
         return jsonify({"message": "No cart found for this session"}), 404
 
     try:
-        total_cost = 0.0
+        total_cost = cart.total_cost
         
         # Add items to the cart
         for item in items:
@@ -722,29 +722,6 @@ def create_order(session_id):
         cart.total_cost = total_cost
         db.session.commit()
 
-        # Once the cart is populated, create the order and transfer cart items to the order
-        order = Order(
-            user_id=user_id,
-            restaurant_id=active_order.restaurant_id,
-            session_id=session_id,
-            status=True,  # Mark as active order
-            total_cost=total_cost
-        )
-        db.session.add(order)
-        db.session.commit()  # Save the new order
-
-        # Transfer items from cart to order
-        for cart_item in cart.items:
-            order_item = OrderItem(order_id=order.id, dish_id=cart_item.dish_id, 
-                                   quantity=cart_item.quantity, price=cart_item.price)
-            db.session.add(order_item)
-        
-        # Commit everything
-        db.session.commit()
-
-        # Clear the cart after order creation
-        db.session.delete(cart)
-        db.session.commit()
 
         return jsonify({"message": "Order created successfully"}), 201
     except Exception as e:
