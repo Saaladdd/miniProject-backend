@@ -309,6 +309,7 @@ def delete_user():
 
 @app.route('/api/restaurant/register',methods=['POST'])
 def register_restaurant():
+    print(request.files)
     json_data = request.form.get('json_data')
     if json_data:
         try:
@@ -334,9 +335,9 @@ def register_restaurant():
 
     if banner:
         unique_filename = hash_filename(banner.filename)
-        image_path = os.path.join(app.config['RESTAURANT_BANNER_PATH'], unique_filename)
+        banner_path = os.path.join(app.config['RESTAURANT_BANNER_PATH'], unique_filename)
         os.makedirs(app.config['RESTAURANT_BANNER_PATH'], exist_ok=True)
-        banner.save(image_path)
+        banner.save(banner_path)
 
     if profile_picture:
         unique_filename = hash_filename(profile_picture.filename)
