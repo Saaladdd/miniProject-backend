@@ -590,6 +590,14 @@ def get_dish(dish_id):
     dishes['image'] = return_link(dish.image)
     return jsonify({"dishes":dishes}), 200
 
+@app.route('/api/get_dish/<int:dish_id>', methods=['GET'])
+def get_full_dish(dish_id):
+    dish = Dish.query.get(dish_id)
+    dish_dict = dish.to_dict()
+    dish_dict['image'] = return_link(dish_dict['image'])
+    return jsonify(dish_dict), 200
+
+
 @app.route('/api/add_to_menu',methods=['POST'])
 @jwt_required()
 def add_to_menu():
@@ -840,12 +848,21 @@ def chat(rest_id):
         dish_details = [
             {
                 "dish_id": dish.id,
-                **dish.image_and_name()
+                **dish.image_and_name(),
+                "is_vegetarian": dish.is_vegetarian
             }
             for dish in queried_dishes
-]
-        print(dish_details)
-        return jsonify({"text": text, "dish_details": dish_details}), 200
+        ]
+        return_dishes = [
+            {
+                "dish_id": dish["dish_id"],
+                "name": dish["name"],
+                "image": return_link(dish["image"]),
+                "is_vegetarian": dish["is_vegetarian"]
+            }
+            for dish in dish_details
+        ]
+        return jsonify({"text": text, "dish_details": return_dishes}), 200
     except Exception as e:
         return jsonify({"message": "Error processing chat", "error": str(e)}), 500
     
