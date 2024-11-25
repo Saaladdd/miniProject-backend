@@ -9,10 +9,24 @@ import random
 from datetime import datetime
 import re
 import tiktoken
+import json
+
+def format_response(response):
+    match = re.search(r'"text":\s*"([^"]*)"', response)
+    if match:
+        text_value = match.group(1)
+    return text_value
 
 def save_message(user_id, rest_id,session_id, role, content):
     try:
-        db.session.add(Conversation(user_id=user_id, rest_id=rest_id, role=role, content=content,session_id = session_id))
+        dish_ids = []
+        if role == 'assistant':
+            json_data = json.loads(content)['dishes']
+            print(json_data)
+            dish_ids = [item['dish_id'] for item in json_data]
+            print(dish_ids)
+
+        db.session.add(Conversation(user_id=user_id, rest_id=rest_id, role=role, content=format_response(content),session_id = session_id, dish_ids=dish_ids))
         db.session.commit()
     except:
         db.session.rollback()
@@ -173,11 +187,7 @@ def generate_random_string(length):
 def return_link(filename):
     return f"http://localhost:5000/uploads/{filename}"
 
-def format_response(response):
-    match = re.search(r'"text":\s*"([^"]*)"', response)
-    if match:
-        text_value = match.group(1)
-    return text_value
+
 
 def count_tokens(messages, model="gpt-4o"):
     """Count the number of tokens in the message list using the OpenAI tokenizer."""

@@ -1,8 +1,7 @@
 from app import db
 from datetime import datetime
 import pytz
-from sqlalchemy.dialects.postgresql import ARRAY
-
+import pickle
 ist = pytz.timezone('Asia/Kolkata')
 
 
@@ -177,7 +176,7 @@ class Conversation(db.Model):
     content = db.Column(db.String(50), nullable=False)
     session_id = db.Column(db.Integer, db.ForeignKey('orders.session_id', name='fk_chat_history_session_id', ondelete='CASCADE'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now(ist))
-    dish_ids = db.Column(ARRAY(db.Integer), default=[])
+    dish_ids = db.Column(db.PickleType)
     def __repr__(self):
         return (f"<ChatHistory(id={self.id}, user_id={self.user_id}, message='{self.content}', "
                 f"created_at='{self.created_at}')>")

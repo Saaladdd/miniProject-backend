@@ -6,7 +6,7 @@ from ai import create_user_description,chatbot_chat
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, JWTManager, get_jwt
 from datetime import timedelta
-from app.functions import sort_user_preferences, generate_session_id,hash_filename,generate_random_string,return_link
+from app.functions import sort_user_preferences, generate_session_id,hash_filename,generate_random_string,return_link,format_response
 from openai import OpenAIError
 from dotenv import load_dotenv
 import openai
@@ -825,6 +825,7 @@ def chat(rest_id):
     user_input = data.get('user_input')
     try:
         try:
+
             chat_response_tuple = chatbot_chat(user_id, rest_id, user_input, session_id, app.config['OPENAI_API_KEY'])
             
 
@@ -880,22 +881,34 @@ def get_chat_session(rest_id, session_id):
             user_id=user_id,
             rest_id=rest_id
         ).order_by(Conversation.id.asc()).all()
-
-
         if not messages:
             return jsonify({"message": "No messages found for this session"}), 404
 
         # Format the messages into a response
         formatted_messages = [
             {
-                "message_id": message.id,
-                "sender": message.role,
-                "text": message.content
+            "message_id": message.id,
+            "sender": message.role,
+            "text": message.content if message.role == "user" else message.content,
+            "dish_ids": message.dish_ids,
             }
             for message in messages
         ]
+        print(formatted_messages)
+        dishes = []
+        for message in formatted_messages:
+            for dish_id in message['dish_ids']:
+                if dish_id:
+                    dish = Dish.query.filter_by(id=dish_id).first()
+                    if dish:
+                        dishes.append({
+                            "dish_id": dish.id,
+                            "name": dish.dish_name,
+                            "image": return_link(dish.image),
+                            "is_vegetarian": dish.is_vegetarian
+                        })
 
-        return jsonify({"messages": formatted_messages}), 200
+        return jsonify({"messages": formatted_messages+dishes}), 200
 
     except Exception as e:
         current_app.logger.error(f"Unexpected error: {str(e)}")
