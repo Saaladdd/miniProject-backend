@@ -2,9 +2,9 @@ from app import db
 from datetime import datetime
 import pytz
 import pickle
-from app.functions import return_link
 ist = pytz.timezone('Asia/Kolkata')
-
+def return_link(filename):
+    return f"http://localhost:5000/uploads/{filename}"
 
 class User(db.Model):
     __tablename__ = 'user'
