@@ -61,7 +61,7 @@ def chatbot_chat(user_id: int, rest_id: int, user_input: str, session_id: int, a
     except Exception as e:
         return jsonify({"error": "An error occurred while processing your request.", "details": str(e)}), 500
         
-    save_message(user_id,rest_id,session_id, "user",user_input)
+    save_message(user_id,rest_id,session_id,"user",user_input)
     print(response)
     save_message(user_id,rest_id,session_id,"assistant",response)
     return jsonify({"reply":response}),200

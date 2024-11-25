@@ -889,12 +889,12 @@ def get_chat_session(rest_id, session_id):
             {
             "message_id": message.id,
             "sender": message.role,
-            "text": message.content if message.role == "user" else message.content,
+            "text": message.content,
             "dish_ids": message.dish_ids,
             }
             for message in messages
         ]
-        
+        print(formatted_messages)
         
         for message in formatted_messages:
             dishes = []
@@ -909,7 +909,6 @@ def get_chat_session(rest_id, session_id):
                             "is_vegetarian": dish.is_vegetarian
                         })
             message["dish_details"] = dishes
-        print(formatted_messages)
         return jsonify({"messages": formatted_messages}), 200
 
     except Exception as e:

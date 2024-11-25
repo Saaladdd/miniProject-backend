@@ -15,19 +15,22 @@ def format_response(response):
     match = re.search(r'"text":\s*"([^"]*)"', response)
     if match:
         text_value = match.group(1)
+    else:
+        return None
     return text_value
 
 def save_message(user_id, rest_id,session_id, role, content):
     try:
-        dish_ids = []
         if role == 'assistant':
             json_data = json.loads(content)['dishes']
             print(json_data)
             dish_ids = [item['dish_id'] for item in json_data]
-            print(dish_ids)
-
-        db.session.add(Conversation(user_id=user_id, rest_id=rest_id, role=role, content=format_response(content),session_id = session_id, dish_ids=dish_ids))
-        db.session.commit()
+            db.session.add(Conversation(user_id=user_id, rest_id=rest_id, role=role, content=format_response(content),session_id = session_id, dish_ids=dish_ids))
+            db.session.commit()
+        else:
+            dish_ids = []
+            db.session.add(Conversation(user_id=user_id, rest_id=rest_id, role=role, content=content,session_id = session_id, dish_ids=dish_ids))
+            db.session.commit()
     except:
         db.session.rollback()
 
