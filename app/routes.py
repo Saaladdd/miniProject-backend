@@ -725,6 +725,23 @@ def create_order(session_id):
         db.session.rollback()
         return jsonify({"message": "Error processing order", "error": str(e)}), 500
 
+@app.route('/api/<int:session_id>/get_cart', methods=['GET'])
+@jwt_required()
+def get_cart(session_id):
+    try:
+        user_id = get_jwt_identity()
+        cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
+        status =cart.session_id.get_status()
+        if not cart or not status:
+            return jsonify({"message": "Cart not found"}), 404
+
+        cart_details = cart.to_dict()
+        return jsonify({"cart": cart_details}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Error processing order", "error": str(e)}), 500
+
+
 @app.route('/api/<int:session_id>/delete_from_cart/<int:dish_id>', methods=['DELETE'])
 @jwt_required()
 def delete_from_cart(session_id,dish_id):
@@ -748,7 +765,7 @@ def delete_from_cart(session_id,dish_id):
         db.session.rollback()
         return jsonify({"message": "Error processing order", "error": str(e)}), 500
     
-@app.route('/api/<int:session_id>/place_order', methods=['GET'])
+@app.route('/api/<int:session_id>/place_order', methods=['POST'])
 @jwt_required()
 def place_order(session_id):
     user_id = get_jwt_identity()
@@ -850,7 +867,6 @@ def chat(rest_id):
     except Exception as e:
         return jsonify({"message": "Error processing chat", "error": str(e)}), 500
     
-
 
 @app.route('/api/chat/<int:rest_id>/session/<string:session_id>', methods=['GET'])
 @jwt_required()

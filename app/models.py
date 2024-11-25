@@ -206,6 +206,9 @@ class Order(db.Model):
         return (f"Order(id={self.id}, user_id={self.user_id}, restaurant_id={self.restaurant_id}, "
                 f"session_id={self.session_id}, status={self.status}, total_cost={self.total_cost}, "
                 f"timestamp={self.timestamp})")
+    
+    def get_status(self):
+        return self.status
 
 class OrderItem(db.Model):
     __tablename__ = 'order_items'
@@ -230,6 +233,15 @@ class Cart(db.Model):
 
     def __repr__(self):
         return f"Cart(id={self.id}, user_id={self.user_id}, session_id={self.session_id}, items_count={len(self.items)})"
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "session_id": self.session_id,
+            "items": [item.to_dict() for item in self.items],
+            "total_cost": self.total_cost
+        }
 
 class CartItem(db.Model):
     __tablename__ = 'cart_items'
@@ -243,3 +255,13 @@ class CartItem(db.Model):
     def __repr__(self):
         return (f"<CartItem(id={self.id}, cart_id={self.cart_id}, dish_id={self.dish_id}, "
                 f"quantity={self.quantity}, price={self.price})>")
+
+    def to_dict(self):
+        dish_info = self.dish.to_dict() if self.dish else {}
+        return {
+            "id": self.id,
+            "dish_id": self.dish_id,
+            "quantity": self.quantity,
+            "price": self.price,
+            "dish_info": dish_info
+        }
