@@ -6,7 +6,7 @@ from ai import create_user_description,chatbot_chat
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, JWTManager, get_jwt
 from datetime import timedelta
-from app.functions import sort_user_preferences, generate_session_id,hash_filename,generate_random_string,return_link,format_response
+from app.functions import sort_user_preferences, generate_session_id,hash_filename,generate_random_string,return_link,format_response,format_response
 from openai import OpenAIError
 from dotenv import load_dotenv
 import openai
