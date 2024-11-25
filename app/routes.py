@@ -442,12 +442,16 @@ def edit_restaurant():
     
 @app.route('/api/restaurant/landing/<int:rest_id>',methods=['GET'])
 def get_restaurant(rest_id):
+    print(Menu.query.filter_by(restaurant_id=rest_id).all())
     restaurant = Restaurant.query.get(rest_id)
     if not restaurant:
         return jsonify({"message": "Restaurant not found"}), 404
     rest_data = restaurant.to_dict()
-    print(rest_data)
+    
     rest_data['banner'] = return_link(restaurant.banner)
+    all_dishes = Dish.query.filter_by(restaurant_id=rest_id).all()
+    rest_data['menu'] = [a.to_dict() for a in all_dishes]
+    print(rest_data)
     return jsonify(rest_data), 200
 
 @app.route('/api/restaurant/delete', methods=['DELETE'])
@@ -571,14 +575,13 @@ def create_dish():
 
 @app.route('/api/get_all_dishes',methods=['GET'])
 @jwt_required()
-def get_dishes(rest_id):
+def get_dishes():
     rest_id = get_jwt_identity()
     dishes = Dish.query.filter_by(restaurant_id=rest_id).all()
     if not dishes:
         return jsonify({"message": "Dishes not found"}), 404
     dishes = [dish.to_dict() for dish in dishes]
-    for dish in dishes:
-        dish['image'] = return_link(dish.image)
+    
     return jsonify({"dishes": dishes })
 
 @app.route('/api/dish/<int:dish_id>', methods=['GET'])
@@ -828,8 +831,6 @@ def chat(rest_id):
 
             chat_response_tuple = chatbot_chat(user_id, rest_id, user_input, session_id, app.config['OPENAI_API_KEY'])
             
-
-
             chat_response = chat_response_tuple[0]
             print(chat_response.get_json()) 
 
@@ -837,6 +838,7 @@ def chat(rest_id):
             chat_reply = json.loads(chat_reply)
     
         except Exception as e: 
+            print(str(e))
             return jsonify({"message": "Error with chat", "error": str(e)}), 500
 
         if not isinstance(chat_reply, dict):
@@ -850,7 +852,8 @@ def chat(rest_id):
             {
                 "dish_id": dish.id,
                 **dish.image_and_name(),
-                "is_vegetarian": dish.is_vegetarian
+                "is_vegetarian": dish.is_vegetarian,
+                "price": dish.price
             }
             for dish in queried_dishes
         ]
@@ -859,7 +862,8 @@ def chat(rest_id):
                 "dish_id": dish["dish_id"],
                 "name": dish["name"],
                 "image": return_link(dish["image"]),
-                "is_vegetarian": dish["is_vegetarian"]
+                "is_vegetarian": dish["is_vegetarian"],
+                "price": dish["price"]
             }
             for dish in dish_details
         ]

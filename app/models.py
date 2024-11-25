@@ -125,7 +125,7 @@ class Dish(db.Model):
     is_gluten_free = db.Column(db.Boolean, default=False)
     is_jain = db.Column(db.Boolean, default=False)
     is_soy_free = db.Column(db.Boolean, default=False)
-    is_available = db.Column(db.Boolean, default=False)
+    is_available = db.Column(db.Boolean, default=True)
     image = db.Column(db.String(100))
     def to_dict(self):
         return {
