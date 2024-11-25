@@ -894,9 +894,10 @@ def get_chat_session(rest_id, session_id):
             }
             for message in messages
         ]
-        print(formatted_messages)
-        dishes = []
+        
+        
         for message in formatted_messages:
+            dishes = []
             for dish_id in message['dish_ids']:
                 if dish_id:
                     dish = Dish.query.filter_by(id=dish_id).first()
@@ -907,8 +908,9 @@ def get_chat_session(rest_id, session_id):
                             "image": return_link(dish.image),
                             "is_vegetarian": dish.is_vegetarian
                         })
-
-        return jsonify({"messages": formatted_messages+dishes}), 200
+            message["dish_details"] = dishes
+        print(formatted_messages)
+        return jsonify({"messages": formatted_messages}), 200
 
     except Exception as e:
         current_app.logger.error(f"Unexpected error: {str(e)}")
