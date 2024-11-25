@@ -1,4 +1,4 @@
-from flask import jsonify, request, json, send_file
+from flask import jsonify, request, json, send_file, current_app
 import os
 from app import app, db
 from app.models import User, Preferences, Restaurant, Menu, Dish, Theme, Order, OrderItem, Conversation, Favorites, Conversation,Cart,CartItem
@@ -307,6 +307,7 @@ def delete_user():
 
 @app.route('/api/restaurant/register',methods=['POST'])
 def register_restaurant():
+    print(request.files)
     json_data = request.form.get('json_data')
     if json_data:
         try:
@@ -332,9 +333,9 @@ def register_restaurant():
 
     if banner:
         unique_filename = hash_filename(banner.filename)
-        image_path = os.path.join(app.config['RESTAURANT_BANNER_PATH'], unique_filename)
+        banner_path = os.path.join(app.config['RESTAURANT_BANNER_PATH'], unique_filename)
         os.makedirs(app.config['RESTAURANT_BANNER_PATH'], exist_ok=True)
-        banner.save(image_path)
+        banner.save(banner_path)
 
     if profile_picture:
         unique_filename = hash_filename(profile_picture.filename)
@@ -589,6 +590,14 @@ def get_dish(dish_id):
     dishes['image'] = return_link(dish.image)
     return jsonify({"dishes":dishes}), 200
 
+@app.route('/api/get_dish/<int:dish_id>', methods=['GET'])
+def get_full_dish(dish_id):
+    dish = Dish.query.get(dish_id)
+    dish_dict = dish.to_dict()
+    dish_dict['image'] = return_link(dish_dict['image'])
+    return jsonify(dish_dict), 200
+
+
 @app.route('/api/add_to_menu',methods=['POST'])
 @jwt_required()
 def add_to_menu():
@@ -839,11 +848,55 @@ def chat(rest_id):
         dish_details = [
             {
                 "dish_id": dish.id,
-                **dish.image_and_name()
+                **dish.image_and_name(),
+                "is_vegetarian": dish.is_vegetarian
             }
             for dish in queried_dishes
-]
-        print(dish_details)
-        return jsonify({"text": text, "dish_details": dish_details}), 200
+        ]
+        return_dishes = [
+            {
+                "dish_id": dish["dish_id"],
+                "name": dish["name"],
+                "image": return_link(dish["image"]),
+                "is_vegetarian": dish["is_vegetarian"]
+            }
+            for dish in dish_details
+        ]
+        return jsonify({"text": text, "dish_details": return_dishes}), 200
     except Exception as e:
         return jsonify({"message": "Error processing chat", "error": str(e)}), 500
+    
+
+
+@app.route('/api/chat/<int:rest_id>/session/<string:session_id>', methods=['GET'])
+@jwt_required()
+def get_chat_session(rest_id, session_id):
+    user_id = get_jwt_identity()
+
+    try:
+        # Query all messages for the given session
+        messages = Conversation.query.filter_by(
+            session_id=session_id,
+            user_id=user_id,
+            rest_id=rest_id
+        ).order_by(Conversation.id.asc()).all()
+
+
+        if not messages:
+            return jsonify({"message": "No messages found for this session"}), 404
+
+        # Format the messages into a response
+        formatted_messages = [
+            {
+                "message_id": message.id,
+                "sender": message.role,
+                "text": message.content
+            }
+            for message in messages
+        ]
+
+        return jsonify({"messages": formatted_messages}), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Unexpected error: {str(e)}")
+        return jsonify({"message": "Unexpected error occurred"}), 500

@@ -53,7 +53,7 @@ def chatbot_chat(user_id: int, rest_id: int, user_input: str, session_id: int, a
     try:
         chat_completion = client.chat.completions.create(
             messages= messages,
-            model ="gpt-4o",
+            model ="gpt-3.5-turbo",
             temperature= 0,
             max_tokens= 2500
         )
