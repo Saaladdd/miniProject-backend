@@ -3,7 +3,7 @@ from flask import request,jsonify
 from app.models import Preferences,Menu,Conversation,Dish,User,Restaurant
 from app import db
 from app.functions import get_user_desc_string, get_conversation_history, save_message, get_menu_for_chatbot, get_filtered_menu_for_chatbot, get_restaurant_details,format_response,count_tokens
-
+import json
     
 def chatbot_chat(user_id: int, rest_id: int, user_input: str, session_id: int, api_key):
     
@@ -63,8 +63,7 @@ def chatbot_chat(user_id: int, rest_id: int, user_input: str, session_id: int, a
         
     save_message(user_id,rest_id,session_id, "user",user_input)
     print(response)
-    assistant_response = format_response(response)
-    save_message(user_id,rest_id,session_id,"assistant",assistant_response)
+    save_message(user_id,rest_id,session_id,"assistant",response)
     return jsonify({"reply":response}),200
 
 def create_user_description(user_id: int, api_key: str) -> str:
