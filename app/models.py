@@ -1,7 +1,6 @@
 from app import db
 from datetime import datetime
 import pytz
-import pickle
 ist = pytz.timezone('Asia/Kolkata')
 def return_link(filename):
     return f"http://localhost:5000/uploads/{filename}"
