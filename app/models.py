@@ -2,6 +2,7 @@ from app import db
 from datetime import datetime
 import pytz
 import pickle
+from app.functions import return_link
 ist = pytz.timezone('Asia/Kolkata')
 
 
@@ -79,7 +80,7 @@ class Favorites(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_favorites_user_id', ondelete='CASCADE'), nullable=False)
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', name='fk_favorites_restaurant_id', ondelete='CASCADE'), nullable=False)
-    category = db.Column(db.String(20), nullable=False)
+    category = db.Column(db.String(20), nullable=True)
     dish = db.relationship('Dish', backref='favorites', lazy=True)
 
     def __repr__(self):
@@ -143,7 +144,7 @@ class Dish(db.Model):
             "is_jain": self.is_jain,
             "is_soy_free": self.is_soy_free,
             "is_available": self.is_available,
-            "image": self.image
+            "image": return_link(self.image)
         }
     
     def image_and_name(self):

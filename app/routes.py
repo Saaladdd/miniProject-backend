@@ -792,24 +792,7 @@ def end_order(session_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Error processing order", "error": str(e)}), 500
-    
-@app.route('/api/chat/get/<int:rest_id>', methods=['GET'])
-@jwt_required()
-def get_chat(rest_id):
-    user_id = get_jwt_identity()
-    session_id = request.args.get('session_id')
-    if not session_id:
-        return jsonify({"message": "Missing session_id"}), 400
-    try:
-        chats = Conversation.query.filter_by(session_id=session_id, user_id=user_id).all()
-        if not chats:
-            return jsonify({"message": "No chats found"}), 404
-        chat_list = [chat.get_all_chats() for chat in chats]
-    except Exception as e:
-        return jsonify({"message": "Error processing chat", "error": str(e)}), 500
-
-    return jsonify({"chats": chat_list}), 200
-    
+     
 @app.route('/api/chat/<int:rest_id>', methods=['POST'])
 @jwt_required()
 def chat(rest_id):
@@ -872,10 +855,11 @@ def chat(rest_id):
 @app.route('/api/chat/<int:rest_id>/session/<string:session_id>', methods=['GET'])
 @jwt_required()
 def get_chat_session(rest_id, session_id):
+
+
     user_id = get_jwt_identity()
 
     try:
-        # Query all messages for the given session
         messages = Conversation.query.filter_by(
             session_id=session_id,
             user_id=user_id,
@@ -884,7 +868,6 @@ def get_chat_session(rest_id, session_id):
         if not messages:
             return jsonify({"message": "No messages found for this session"}), 404
 
-        # Format the messages into a response
         formatted_messages = [
             {
             "message_id": message.id,
@@ -914,3 +897,20 @@ def get_chat_session(rest_id, session_id):
     except Exception as e:
         current_app.logger.error(f"Unexpected error: {str(e)}")
         return jsonify({"message": "Unexpected error occurred"}), 500
+    
+@app.route('/api/favorites/<int:rest_id>', methods=['GET'])
+@jwt_required()
+def get_favorites(rest_id):
+    user_id = get_jwt_identity()
+    try:
+        favorites = Favorites.query.filter_by(user_id=user_id, restaurant_id=rest_id).all()
+        favorite_list = []
+        for favorite in favorites:
+            for dish in favorite.dish:
+                favorite_list.append(dish.to_dict())
+        if not favorites:
+            return jsonify({"message": "No favorites found"}), 404
+        return jsonify({"favorites": favorite_list}), 200
+    except Exception as e:
+        return jsonify({"message": "Error getting favorites", "error": str(e)}), 500
+        
