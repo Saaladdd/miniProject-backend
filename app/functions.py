@@ -58,13 +58,9 @@ def get_filtered_menu_for_chatbot(rest_id, user_id):
             f"Menu ID: {menu.id}\n"
             f"Menu Name: {menu.menu_type or 'No name provided'}\n\n"
         )
-        
         all_dishes = Dish.query.filter_by(menu_id=menu.id).all()
- 
         filtered_dish_ids = sort_user_preferences(user_id, menu.id)
-
         filtered_dishes = [dish for dish in all_dishes if dish.id in filtered_dish_ids]
-        
         if not filtered_dishes:
             menu_details += "No dishes available for this menu based on your preferences.\n\n"
             continue
@@ -89,7 +85,6 @@ def get_filtered_menu_for_chatbot(rest_id, user_id):
     return menu_details.strip()
 
 def get_menu_for_chatbot(rest_id):
-    
     menus = Menu.query.filter_by(restaurant_id=rest_id).all()
     
     if not menus:

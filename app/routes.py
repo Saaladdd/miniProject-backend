@@ -4,25 +4,15 @@ from app import app, db
 from app.models import User, Preferences, Restaurant, Menu, Dish, Theme, Order, OrderItem, Conversation, Favorites, Conversation,Cart,CartItem
 from ai import create_user_description,chatbot_chat
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, JWTManager, get_jwt
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 from datetime import timedelta
-from app.functions import sort_user_preferences, generate_session_id,hash_filename,generate_random_string,return_link,format_response,format_response
+from app.functions import sort_user_preferences, generate_session_id,hash_filename,generate_random_string,return_link
 from openai import OpenAIError
 from dotenv import load_dotenv
 import openai
-import random
-import string
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
-
-@app.route('/uploads/<path:filename>')
-def serve_image(filename):
-    try:
-        filename = filename.replace('/','\\')
-        return send_file("..\\"+filename)
-    except FileNotFoundError:
-        return jsonify({'error': 'File not found'}), 404
 
 @app.route('/api/user/register', methods=['POST'])
 def register_user():
@@ -597,7 +587,6 @@ def get_full_dish(dish_id):
     dish_dict['image'] = return_link(dish_dict['image'])
     return jsonify(dish_dict), 200
 
-
 @app.route('/api/add_to_menu',methods=['POST'])
 @jwt_required()
 def add_to_menu():
@@ -634,7 +623,7 @@ def get_restaurant_menu(menu_id):
     return jsonify({"menu": menu.to_dict()})
 
 @app.route('/api/user_menu/<int:menu_id>', methods=['GET'])
-def get_user_menu( menu_id):
+def get_user_menu(menu_id):
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
     choice = request.json.get('choice',0)
@@ -740,7 +729,6 @@ def get_cart(session_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Error processing order", "error": str(e)}), 500
-
 
 @app.route('/api/<int:session_id>/delete_from_cart/<int:dish_id>', methods=['DELETE'])
 @jwt_required()
@@ -867,7 +855,6 @@ def chat(rest_id):
     except Exception as e:
         return jsonify({"message": "Error processing chat", "error": str(e)}), 500
     
-
 @app.route('/api/chat/<int:rest_id>/session/<string:session_id>', methods=['GET'])
 @jwt_required()
 def get_chat_session(rest_id, session_id):
@@ -929,4 +916,11 @@ def get_favorites(rest_id):
         return jsonify({"favorites": favorite_list}), 200
     except Exception as e:
         return jsonify({"message": "Error getting favorites", "error": str(e)}), 500
-        
+
+@app.route('/uploads/<path:filename>')
+def serve_image(filename):
+    try:
+        filename = filename.replace('/','\\')
+        return send_file("..\\"+filename)
+    except FileNotFoundError:
+        return jsonify({'error': 'File not found'}), 404
