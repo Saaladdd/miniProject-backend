@@ -699,19 +699,23 @@ def create_order(session_id):
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
     
-    active_order = next((order for order in user.orders if order.status == True), None)
+
+    active_order = next((order for order in user.orders if order.session_id==session_id), None)
+    print(active_order)
+    print(session_id)
 
     if not active_order or active_order.session_id != session_id:
+        
         return jsonify({"message": "Invalid Session"}), 403
     
+    
+
     data = request.json 
     items = data.get('items', [])
-    print(items)
     if not items:
         return jsonify({"message": "No items provided"}), 400
     
     cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
-    print(Cart.query.all())
     if not cart:
         return jsonify({"message": "No cart found for this session"}), 404
 
@@ -747,8 +751,10 @@ def get_cart(session_id):
     try:
         user_id = get_jwt_identity()
         cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
+        print(cart)
         status =Order.query.filter_by(session_id=session_id, user_id=user_id).first().get_status()
-        if not cart or not status:
+        print(status)
+        if not cart or status:
             return jsonify({"message": "Cart not found"}), 404
 
         cart_details = cart.to_dict()
