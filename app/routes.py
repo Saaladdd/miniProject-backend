@@ -432,12 +432,16 @@ def edit_restaurant():
     
 @app.route('/api/restaurant/landing/<int:rest_id>',methods=['GET'])
 def get_restaurant(rest_id):
+    print(Menu.query.filter_by(restaurant_id=rest_id).all())
     restaurant = Restaurant.query.get(rest_id)
     if not restaurant:
         return jsonify({"message": "Restaurant not found"}), 404
     rest_data = restaurant.to_dict()
-    print(rest_data)
+    
     rest_data['banner'] = return_link(restaurant.banner)
+    all_dishes = Dish.query.filter_by(restaurant_id=rest_id).all()
+    rest_data['menu'] = [a.to_dict() for a in all_dishes]
+    print(rest_data)
     return jsonify(rest_data), 200
 
 @app.route('/api/restaurant/delete', methods=['DELETE'])
@@ -561,14 +565,13 @@ def create_dish():
 
 @app.route('/api/get_all_dishes',methods=['GET'])
 @jwt_required()
-def get_dishes(rest_id):
+def get_dishes():
     rest_id = get_jwt_identity()
     dishes = Dish.query.filter_by(restaurant_id=rest_id).all()
     if not dishes:
         return jsonify({"message": "Dishes not found"}), 404
     dishes = [dish.to_dict() for dish in dishes]
-    for dish in dishes:
-        dish['image'] = return_link(dish.image)
+    
     return jsonify({"dishes": dishes })
 
 @app.route('/api/dish/<int:dish_id>', methods=['GET'])
@@ -676,8 +679,11 @@ def start_order(rest_id):
                 order.status = False
                 db.session.flush()
             new_order = Order(user_id=user_id, session_id=session_id, restaurant_id=rest_id, status=True)
+            db.session.add(new_order)
+            db.session.commit()
+
             new_cart = Cart(user_id=user_id, session_id=session_id)
-            db.session.add(new_order,new_cart)
+            db.session.add(new_cart)
             db.session.commit()
         except Exception as e: 
             db.session.rollback()
@@ -694,18 +700,18 @@ def create_order(session_id):
     user = User.query.get(user_id)
     
     active_order = next((order for order in user.orders if order.status == True), None)
-    print(active_order)
 
     if not active_order or active_order.session_id != session_id:
         return jsonify({"message": "Invalid Session"}), 403
     
     data = request.json 
     items = data.get('items', [])
-    
+    print(items)
     if not items:
         return jsonify({"message": "No items provided"}), 400
     
     cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
+    print(Cart.query.all())
     if not cart:
         return jsonify({"message": "No cart found for this session"}), 404
 
@@ -741,15 +747,45 @@ def get_cart(session_id):
     try:
         user_id = get_jwt_identity()
         cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
-        status =cart.session_id.get_status()
+        status =Order.query.filter_by(session_id=session_id, user_id=user_id).first().get_status()
         if not cart or not status:
             return jsonify({"message": "Cart not found"}), 404
 
         cart_details = cart.to_dict()
+        for item in cart_details['items']:
+            dish = db.session.get(Dish, item['id'])
+            item['dish_name'] = dish.dish_name
+            item['image'] = return_link(dish.image)
+            print(dish)
+        print(cart_details)
         return jsonify({"cart": cart_details}), 200
     except Exception as e:
         db.session.rollback()
+        print(str(e))
         return jsonify({"message": "Error processing order", "error": str(e)}), 500
+
+@app.route('/api/<int:session_id>/update_cart', methods=['POST'])
+@jwt_required()
+def update_cart(session_id):
+    user_id = get_jwt_identity()
+    data = request.json
+    operation = data.get('operation')
+    dish_id = data.get('id')
+    cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
+    print(CartItem.query.all())
+    cart_item = CartItem.query.filter_by(cart_id=cart.id, dish_id=dish_id).first()
+    print(cart_item)
+    if operation == 'increase':
+        cart_item.quantity += 1
+        cart.total_cost += cart_item.price
+        db.session.commit()
+        return jsonify({'message': "Item updated successfully"}), 200
+    if operation == 'decrease':
+        cart_item.quantity -= 1
+        cart.total_cost -= cart_item.price
+        db.session.commit()
+        return jsonify({'message': "Item updated successfully"}), 200
+    return jsonify({'message': "error"}),500
 
 @app.route('/api/<int:session_id>/delete_from_cart/<int:dish_id>', methods=['DELETE'])
 @jwt_required()
@@ -837,8 +873,6 @@ def chat(rest_id):
 
             chat_response_tuple = chatbot_chat(user_id, rest_id, user_input, session_id, app.config['OPENAI_API_KEY'])
             
-
-
             chat_response = chat_response_tuple[0]
             print(chat_response.get_json()) 
 
@@ -846,6 +880,7 @@ def chat(rest_id):
             chat_reply = json.loads(chat_reply)
     
         except Exception as e: 
+            print(str(e))
             return jsonify({"message": "Error with chat", "error": str(e)}), 500
 
         if not isinstance(chat_reply, dict):
@@ -859,7 +894,8 @@ def chat(rest_id):
             {
                 "dish_id": dish.id,
                 **dish.image_and_name(),
-                "is_vegetarian": dish.is_vegetarian
+                "is_vegetarian": dish.is_vegetarian,
+                "price": dish.price
             }
             for dish in queried_dishes
         ]
@@ -868,7 +904,8 @@ def chat(rest_id):
                 "dish_id": dish["dish_id"],
                 "name": dish["name"],
                 "image": return_link(dish["image"]),
-                "is_vegetarian": dish["is_vegetarian"]
+                "is_vegetarian": dish["is_vegetarian"],
+                "price": dish["price"]
             }
             for dish in dish_details
         ]
@@ -879,10 +916,7 @@ def chat(rest_id):
 @app.route('/api/chat/<int:rest_id>/session/<string:session_id>', methods=['GET'])
 @jwt_required()
 def get_chat_session(rest_id, session_id):
-
-
     user_id = get_jwt_identity()
-
     try:
         messages = Conversation.query.filter_by(
             session_id=session_id,
@@ -891,7 +925,6 @@ def get_chat_session(rest_id, session_id):
         ).order_by(Conversation.id.asc()).all()
         if not messages:
             return jsonify({"message": "No messages found for this session"}), 404
-
         formatted_messages = [
             {
             "message_id": message.id,
@@ -913,9 +946,12 @@ def get_chat_session(rest_id, session_id):
                             "dish_id": dish.id,
                             "name": dish.dish_name,
                             "image": return_link(dish.image),
-                            "is_vegetarian": dish.is_vegetarian
+                            "is_vegetarian": dish.is_vegetarian,
+                            "price": dish.price
                         })
             message["dish_details"] = dishes
+            del message["dish_ids"]
+        print(formatted_messages)
         return jsonify({"messages": formatted_messages}), 200
 
     except Exception as e:

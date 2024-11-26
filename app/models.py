@@ -136,7 +136,7 @@ class Dish(db.Model):
     is_gluten_free = db.Column(db.Boolean, default=False)
     is_jain = db.Column(db.Boolean, default=False)
     is_soy_free = db.Column(db.Boolean, default=False)
-    is_available = db.Column(db.Boolean, default=False)
+    is_available = db.Column(db.Boolean, default=True)
     image = db.Column(db.String(100))
     rating = db.Column(db.Integer, default=5)
     def to_dict(self):
@@ -269,11 +269,9 @@ class CartItem(db.Model):
                 f"quantity={self.quantity}, price={self.price})>")
 
     def to_dict(self):
-        dish_info = self.dish.to_dict() if self.dish else {}
         return {
             "id": self.id,
             "dish_id": self.dish_id,
             "quantity": self.quantity,
-            "price": self.price,
-            "dish_info": dish_info
+            "price": self.price
         }
