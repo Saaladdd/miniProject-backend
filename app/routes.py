@@ -746,8 +746,8 @@ def get_cart(session_id):
         cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
         print(cart)
         status =Order.query.filter_by(session_id=session_id, user_id=user_id).first().get_status()
-        print(status)
-        if not cart or status:
+        print(cart, status)
+        if not (cart or status):
             return jsonify({"message": "Cart not found"}), 404
 
         cart_details = cart.to_dict()
