@@ -854,6 +854,13 @@ def end_order(session_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Error processing order", "error": str(e)}), 500
+    
+@app.route('/api/get_active_orders', methods=['GET'])
+@jwt_required()
+def get_active_orders():
+    rest_id = get_jwt_identity()
+    orders = Order.query.filter_by(restaurant_id=rest_id, status=True).all()
+    return jsonify([order.to_dict() for order in orders]), 200
      
 @app.route('/api/chat/<int:rest_id>', methods=['POST'])
 @jwt_required()

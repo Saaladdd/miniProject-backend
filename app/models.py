@@ -222,6 +222,17 @@ class Order(db.Model):
     def get_status(self):
         return self.status
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'restaurant_id': self.restaurant_id,
+            'session_id': self.session_id,
+            'status': self.status,
+            'total_cost': self.total_cost,
+            'timestamp': self.timestamp,
+            'items': [item.to_dict() for item in self.items]
+        }
 class OrderItem(db.Model):
     __tablename__ = 'order_items'
     
@@ -233,6 +244,15 @@ class OrderItem(db.Model):
 
     def __repr__(self):
         return f"<OrderItem(id={self.id}, order_id={self.order_id}, dish_id={self.dish_id}, quantity={self.quantity}, price={self.price})>"
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'order_id': self.order_id,
+            'dish_id': self.dish_id,
+            'quantity': self.quantity,
+            'price': self.price
+        }
 
 class Cart(db.Model):
     __tablename__ = 'cart'
