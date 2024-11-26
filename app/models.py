@@ -256,11 +256,9 @@ class CartItem(db.Model):
                 f"quantity={self.quantity}, price={self.price})>")
 
     def to_dict(self):
-        dish_info = self.dish.to_dict() if self.dish else {}
         return {
             "id": self.id,
             "dish_id": self.dish_id,
             "quantity": self.quantity,
-            "price": self.price,
-            "dish_info": dish_info
+            "price": self.price
         }
