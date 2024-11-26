@@ -580,6 +580,27 @@ def get_dish(dish_id):
     dishes['image'] = return_link(dish.image)
     return jsonify({"dishes":dishes}), 200
 
+@app.route('/api/<int:order_id>/rate_dish/<int:dish_id>', methods=['POST'])
+def rate_dish(dish_id,order_id):
+    data = request.json
+    rating = data.get('rating')
+    update_order = OrderItem.query.filter_by(order=order_id, dish_id=dish_id).first()
+    update_order.rating = rating
+    db.session.commit()
+    orders = OrderItem.query.filter_by(dish_id=dish_id).all()
+    if not rating:
+        return jsonify({"message": "Please provide a rating"}), 400
+    dish = Dish.query.get(dish_id)
+    if not dish:
+        return jsonify({"message": "Dish not found"}), 404
+    total_rating = 0
+    for order in orders:
+        total_rating += order.rating
+    average_rating = total_rating / len(orders)
+    dish.rating = average_rating
+    db.session.commit()
+    return jsonify({"message": "Dish rated successfully"}), 200
+
 @app.route('/api/get_dish/<int:dish_id>', methods=['GET'])
 def get_full_dish(dish_id):
     dish = Dish.query.get(dish_id)

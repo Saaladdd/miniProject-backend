@@ -74,6 +74,18 @@ class Restaurant(db.Model):
                 f"address='{self.address}', phone='{self.phone}', email='{self.email}', "
                 f"rating={self.rating})>")
 
+class RestaurantReview(db.Model):
+    __tablename__ = 'review'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_review_user_id', ondelete='CASCADE'), nullable=False)
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', name='fk_review_restaurant_id', ondelete='CASCADE'), nullable=False)
+    comment = db.Column(db.String(200), nullable=True)
+    rating = db.Column(db.Integer, nullable=False)
+
+    def __repr__(self):
+        return (f"<Review(id={self.id}, user_id={self.user_id}, restaurant_id={self.restaurant_id}, "
+                f"review='{self.review}', rating={self.rating})>")
+
 class Favorites(db.Model):
     __tablename__ = 'favorites'
     id = db.Column(db.Integer, primary_key=True)
@@ -126,6 +138,7 @@ class Dish(db.Model):
     is_soy_free = db.Column(db.Boolean, default=False)
     is_available = db.Column(db.Boolean, default=False)
     image = db.Column(db.String(100))
+    rating = db.Column(db.Integer, default=5)
     def to_dict(self):
         return {
             "id": self.id,
