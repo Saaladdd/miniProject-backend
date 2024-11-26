@@ -297,6 +297,7 @@ def delete_user():
 
 @app.route('/api/restaurant/register',methods=['POST'])
 def register_restaurant():
+    print(request.files)
     json_data = request.form.get('json_data')
     if json_data:
         try:
@@ -431,6 +432,7 @@ def edit_restaurant():
     
 @app.route('/api/restaurant/landing/<int:rest_id>',methods=['GET'])
 def get_restaurant(rest_id):
+    print(Menu.query.filter_by(restaurant_id=rest_id).all())
     restaurant = Restaurant.query.get(rest_id)
     if not restaurant:
         return jsonify({"message": "Restaurant not found"}), 404
@@ -439,6 +441,7 @@ def get_restaurant(rest_id):
     rest_data['banner'] = return_link(restaurant.banner)
     all_dishes = Dish.query.filter_by(restaurant_id=rest_id).all()
     rest_data['menu'] = [a.to_dict() for a in all_dishes]
+    print(rest_data)
     return jsonify(rest_data), 200
 
 @app.route('/api/restaurant/delete', methods=['DELETE'])
@@ -497,6 +500,7 @@ def delete_menu(menu_id):
         return jsonify({"message": "Menu deleted successfully"}), 200
     except Exception as e:
         db.session.rollback()
+        print(e)
         return jsonify({"message": "Error deleting menu"}),500
     
 @app.route('/api/create_dish',methods=['POST'])
@@ -556,6 +560,7 @@ def create_dish():
         db.session.commit()
         return jsonify({"message": "Dish created successfully"}), 201
     except Exception as e:
+        print(e)
         return jsonify({"message": "Error creating dish please ensure all required fields are filled."}), 500
 
 @app.route('/api/get_all_dishes',methods=['GET'])
@@ -628,6 +633,7 @@ def add_to_menu():
         db.session.commit()
     except Exception as e:
         db.session.rollback()
+        print(e)
         return jsonify({"message": "Error adding dish to menu"}), 500
     return jsonify({"message": "Dish added to menu"}), 200
 
@@ -681,6 +687,7 @@ def start_order(rest_id):
             db.session.commit()
         except Exception as e: 
             db.session.rollback()
+            print(e)
             return jsonify({"message": str(e)}), 500
         return jsonify(session_id=session_id)
     else:
@@ -733,7 +740,7 @@ def create_order(session_id):
         cart.total_cost = total_cost
         db.session.commit()
 
-        return jsonify({"message": "Items added to cart successfully"}), 201
+        return jsonify({"message": "Order created successfully"}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Error processing order", "error": str(e)}), 500
@@ -746,9 +753,9 @@ def get_cart(session_id):
         cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
         print(cart)
         status =Order.query.filter_by(session_id=session_id, user_id=user_id).first().get_status()
-        print(cart, status)
-        if not (cart or status):
-            return jsonify({"message": "Cart not found"}), 404
+        print(status)
+        if not cart or not status:
+            return jsonify({"message": "Cart not found \n Start a new session"}), 404
 
         cart_details = cart.to_dict()
         for item in cart_details['items']:
@@ -756,9 +763,11 @@ def get_cart(session_id):
             item['dish_name'] = dish.dish_name
             item['image'] = return_link(dish.image)
             print(dish)
+        print(cart_details)
         return jsonify({"cart": cart_details}), 200
     except Exception as e:
         db.session.rollback()
+        print(str(e))
         return jsonify({"message": "Error processing order", "error": str(e)}), 500
 
 @app.route('/api/<int:session_id>/update_cart', methods=['POST'])
@@ -769,7 +778,9 @@ def update_cart(session_id):
     operation = data.get('operation')
     dish_id = data.get('id')
     cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
+    print(CartItem.query.all())
     cart_item = CartItem.query.filter_by(cart_id=cart.id, dish_id=dish_id).first()
+    print(cart_item)
     if operation == 'increase':
         cart_item.quantity += 1
         cart.total_cost += cart_item.price
@@ -782,12 +793,11 @@ def update_cart(session_id):
         return jsonify({'message': "Item updated successfully"}), 200
     return jsonify({'message': "error"}),500
 
-@app.route('/api/<int:session_id>/delete_cart_item', methods=['POST'])
+@app.route('/api/<int:session_id>/delete_from_cart/<int:dish_id>', methods=['DELETE'])
 @jwt_required()
-def delete_from_cart(session_id):
+def delete_from_cart(session_id,dish_id):
     user_id = get_jwt_identity()
-    data = request.json
-    dish_id = data.get('id')
+    
     cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
     if not cart:
         return jsonify({"message": "Cart not found"}), 404
@@ -944,6 +954,7 @@ def get_chat_session(rest_id, session_id):
             }
             for message in messages
         ]
+        print(formatted_messages)
         
         for message in formatted_messages:
             dishes = []
@@ -960,7 +971,7 @@ def get_chat_session(rest_id, session_id):
                         })
             message["dish_details"] = dishes
             del message["dish_ids"]
-
+        print(formatted_messages)
         return jsonify({"messages": formatted_messages}), 200
 
     except Exception as e:
@@ -1005,30 +1016,6 @@ def serve_image(filename):
         return send_file("..\\"+filename)
     except FileNotFoundError:
         return jsonify({'error': 'File not found'}), 404
-    
-@app.route('/api/get_restId_from_sessionId/<int:session_id>', methods=['GET'])
-@jwt_required()
-def get_restId_from_sessionId(session_id):
-    user_id = get_jwt_identity()
-    order = Order.query.filter_by(session_id=session_id, user_id=user_id).first()
-    if not order:
-        return jsonify({"message": "Order not found"}), 404
-    return jsonify({"rest_id": order.restaurant_id}), 200
-
-@app.route('/api/get_cart_quantity/<int:session_id>', methods=['GET'])
-@jwt_required()
-def get_cart_items(session_id):
-    user_id = get_jwt_identity()
-    if session_id:
-        cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
-        if not cart:
-            return jsonify({"quantity": 0}), 200
-        quantity = 0
-        cart_details = cart.to_dict()
-        for item in cart_details['items']:
-            quantity += item['quantity']
-        return jsonify({"quantity": quantity}), 200
-    return jsonify({"quantity": 0}), 200
     
 
 
@@ -1084,29 +1071,29 @@ def get_restaurant_orders():
         return jsonify({"message": f"An error occurred: {str(e)}"}), 500
 
 
-@app.route('/api/restaurant/orders/<int:order_id>', methods=['PUT'])
-@jwt_required()
-def update_order_status(order_id):
-    try:
-        restaurant_id = get_jwt_identity() 
+# @app.route('/api/restaurant/orders/<int:order_id>', methods=['PUT'])
+# @jwt_required()
+# def update_order_status(order_id):
+#     try:
+#         restaurant_id = get_jwt_identity() 
 
        
-        order = Order.query.filter_by(id=order_id, restaurant_id=restaurant_id).first()
+#         order = Order.query.filter_by(id=order_id, restaurant_id=restaurant_id).first()
 
-        print(order)
+#         print(order)
 
-        if not order:
-            return jsonify({"message": "Order not found or not authorized to update."}), 404
+#         if not order:
+#             return jsonify({"message": "Order not found or not authorized to update."}), 404
 
-        data = request.get_json()
-        new_status = data.get("status")
-        print(new_status)
-        if new_status not in [True, False]:
-            return jsonify({"message": "Invalid status. Must be 'Pending' or 'Completed'."}), 400
+#         data = request.get_json()
+#         new_status = data.get("status")
+#         print(new_status)
+#         if new_status not in [True, False]:
+#             return jsonify({"message": "Invalid status. Must be 'Pending' or 'Completed'."}), 400
 
-        order.status = True if new_status == True else False
-        db.session.commit()
+#         order.status = True if new_status == True else False
+#         db.session.commit()
 
-        return jsonify({"message": "Order status updated successfully."}), 200
-    except Exception as e:
-        return jsonify({"message": f"An error occurred: {str(e)}"}), 500
+#         return jsonify({"message": "Order status updated successfully."}), 200
+#     except Exception as e:
+#         return jsonify({"message": f"An error occurred: {str(e)}"}), 500
