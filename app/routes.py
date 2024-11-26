@@ -957,7 +957,22 @@ def get_chat_session(rest_id, session_id):
     except Exception as e:
         current_app.logger.error(f"Unexpected error: {str(e)}")
         return jsonify({"message": "Unexpected error occurred"}), 500
-    
+
+@app.route('/api/add_to_favorites/<int:dish_id>', methods=['POST'])
+@jwt_required()
+def add_to_favorites(dish_id):
+    user_id = get_jwt_identity()
+    try:
+        dish = Dish.query.filter_by(id=dish_id).first()
+        if not dish:
+            return jsonify({"message": "Dish not found"}), 404
+        favorite = Favorites(user_id=user_id, restaurant_id=dish.rest_id,dish=dish)
+        db.session.add(favorite)
+        db.session.commit()
+        return jsonify({"message": "Dish added to favorites"}), 200
+    except Exception as e:
+        return jsonify({"message": "Error adding to favorites", "error": str(e)}), 500
+
 @app.route('/api/favorites/<int:rest_id>', methods=['GET'])
 @jwt_required()
 def get_favorites(rest_id):
