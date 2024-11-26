@@ -743,6 +743,29 @@ def get_cart(session_id):
         print(str(e))
         return jsonify({"message": "Error processing order", "error": str(e)}), 500
 
+@app.route('/api/<int:session_id>/update_cart', methods=['POST'])
+@jwt_required()
+def update_cart(session_id):
+    user_id = get_jwt_identity()
+    data = request.json
+    operation = data.get('operation')
+    dish_id = data.get('id')
+    cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
+    print(CartItem.query.all())
+    cart_item = CartItem.query.filter_by(cart_id=cart.id, dish_id=dish_id).first()
+    print(cart_item)
+    if operation == 'increase':
+        cart_item.quantity += 1
+        cart.total_cost += cart_item.price
+        db.session.commit()
+        return jsonify({'message': "Item updated successfully"}), 200
+    if operation == 'decrease':
+        cart_item.quantity -= 1
+        cart.total_cost -= cart_item.price
+        db.session.commit()
+        return jsonify({'message': "Item updated successfully"}), 200
+    return jsonify({'message': "error"}),500
+
 @app.route('/api/<int:session_id>/delete_from_cart/<int:dish_id>', methods=['DELETE'])
 @jwt_required()
 def delete_from_cart(session_id,dish_id):
