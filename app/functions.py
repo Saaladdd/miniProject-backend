@@ -1,4 +1,4 @@
-from app.models import User, Preferences, Restaurant, Menu, Dish, Theme, Conversation
+from app.models import User, Preferences, Restaurant, Menu, Dish, Theme, Conversation,Cart
 from app import db
 import secrets
 import base64
@@ -198,3 +198,15 @@ def count_tokens(messages, model="gpt-4o"):
         total_tokens += len(tokenizer.encode(message["content"]))
     
     return total_tokens
+
+def clear_cart(row_id):
+    # Get the row by its ID
+    row = Cart.query.get(row_id)
+    if row:
+        # Set all columns to None, except the ID (or primary key)
+        for column in Cart.__table__.columns.keys():
+            if column != "id":  # Keep the ID column intact
+                setattr(row, column, None)
+        db.session.commit()
+        return "Row cleared successfully."
+    return "Row not found."

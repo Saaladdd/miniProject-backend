@@ -209,6 +209,7 @@ class Order(db.Model):
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id', name='fk_orders_restaurant_id', ondelete='CASCADE'), nullable=False)
     session_id = db.Column(db.Integer, nullable=False, unique=True)
     status = db.Column(db.Boolean, nullable=False)
+    order_status = db.Column(db.Integer)
     total_cost = db.Column(db.Float, default=0.0)
     timestamp = db.Column(db.DateTime, default=datetime.now(ist))
     
@@ -233,6 +234,8 @@ class Order(db.Model):
             'timestamp': self.timestamp,
             'items': [item.to_dict() for item in self.items]
         }
+    
+
 class OrderItem(db.Model):
     __tablename__ = 'order_items'
     
@@ -241,6 +244,7 @@ class OrderItem(db.Model):
     dish_id = db.Column(db.Integer, db.ForeignKey('dish.id'), nullable=False)
     quantity = db.Column(db.Integer, nullable=False, default =1)
     price = db.Column(db.Float, nullable=False)
+    order_time = db.Column(db.DateTime, default=datetime.now(ist))
 
     def __repr__(self):
         return f"<OrderItem(id={self.id}, order_id={self.order_id}, dish_id={self.dish_id}, quantity={self.quantity}, price={self.price})>"
@@ -253,6 +257,7 @@ class OrderItem(db.Model):
             'quantity': self.quantity,
             'price': self.price
         }
+
 
 class Cart(db.Model):
     __tablename__ = 'cart'

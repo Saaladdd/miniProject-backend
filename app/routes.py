@@ -6,7 +6,7 @@ from ai import create_user_description,chatbot_chat
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 from datetime import timedelta
-from app.functions import sort_user_preferences, generate_session_id,hash_filename,generate_random_string,return_link
+from app.functions import sort_user_preferences, generate_session_id,hash_filename,generate_random_string,return_link,clear_cart
 from openai import OpenAIError
 from dotenv import load_dotenv
 import openai
@@ -672,7 +672,7 @@ def start_order(rest_id):
             for order in user.orders:
                 order.status = False
                 db.session.flush()
-            new_order = Order(user_id=user_id, session_id=session_id, restaurant_id=rest_id, status=False)
+            new_order = Order(user_id=user_id, session_id=session_id, restaurant_id=rest_id, status=True)
             db.session.add(new_order)
             db.session.commit()
 
@@ -726,7 +726,7 @@ def create_order(session_id):
             if not dish:
                 return jsonify({"message": f"Dish with ID {dish_id} not found"}), 404
             price = dish.price * quantity
-            cart_item = CartItem(cart_id=cart.id, dish_id=dish_id, quantity=quantity, price=price)
+            cart_item = CartItem(cart_id=cart.id, dish_id=dish_id, quantity=quantity, price=dish.price)
             db.session.add(cart_item)
             total_cost += price
         
@@ -752,7 +752,6 @@ def get_cart(session_id):
 
         cart_details = cart.to_dict()
         for item in cart_details['items']:
-            dish = db.session.get(Dish, item['dish_id'])
             dish = db.session.get(Dish, item['dish_id'])
             item['dish_name'] = dish.dish_name
             item['image'] = return_link(dish.image)
@@ -831,9 +830,12 @@ def place_order(session_id):
                 dish_id=cart_item.dish_id,
                 quantity=cart_item.quantity,
                 price=cart_item.price
+                
             )
             db.session.add(order_item)
-        
+        clear_cart(cart.id)
+        cart_i = CartItem.query.filter_by(session_id=session_id, user_id=user_id).first()
+        db.delete(cart_i)
         db.session.commit()
         
         return jsonify({"message": "Order placed successfully"}), 200
