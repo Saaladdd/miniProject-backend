@@ -678,7 +678,7 @@ def start_order(rest_id):
             for order in user.orders:
                 order.status = False
                 db.session.flush()
-            new_order = Order(user_id=user_id, session_id=session_id, restaurant_id=rest_id, status=True)
+            new_order = Order(user_id=user_id, session_id=session_id, restaurant_id=rest_id, status=False)
             db.session.add(new_order)
             db.session.commit()
 
@@ -753,7 +753,7 @@ def get_cart(session_id):
 
         cart_details = cart.to_dict()
         for item in cart_details['items']:
-            dish = db.session.get(Dish, item['id'])
+            dish = db.session.get(Dish, item['dish_id'])
             item['dish_name'] = dish.dish_name
             item['image'] = return_link(dish.image)
             print(dish)
@@ -816,6 +816,7 @@ def place_order(session_id):
     user_id = get_jwt_identity()
     
     cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
+    print(cart)
     if not cart:
         return jsonify({"message": "Cart not found"}), 404
     
@@ -823,6 +824,9 @@ def place_order(session_id):
         
         order = Order.query.filter_by(session_id=session_id, user_id=user_id).first()
         order.total_cost += cart.total_cost
+
+        print(order)
+        print(order.total_cost)
 
         for cart_item in cart.items:
             order_item = OrderItem(
@@ -1006,101 +1010,81 @@ def serve_image(filename):
     
 
 
-@app.route('/api/orders', methods=['GET'])
-@jwt_required()
-def get_user_orders():
-    user_id = get_jwt_identity()
+# @app.route('/api/orders', methods=['GET'])
+# @jwt_required()
+# def get_user_orders():
+#     user_id = get_jwt_identity()
 
-    try:
-        orders = Order.query.filter_by(user_id=user_id).all()
-        if not orders:
-            return jsonify({"message": "No orders found"}), 404
+#     try:
+#         orders = Order.query.filter_by(user_id=user_id).all()
+#         if not orders:
+#             return jsonify({"message": "No orders found"}), 404
 
-        orders_data = []
-        for order in orders:
-            items = [
-                {
-                    "name": item.dish.name, 
-                    "quantity": item.quantity,
-                    "price": item.price,
-                }
-                for item in order.items
-            ]
-            orders_data.append({
-                "id": order.id,
-                "customer": "You", 
-                "items": items,
-                "total": order.total_cost,
-                "status": "Completed" if order.status else "Pending",
-                "timestamp": order.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-            })
+#         orders_data = []
+#         for order in orders:
+#             items = [
+#                 {
+#                     "name": item.dish.name, 
+#                     "quantity": item.quantity,
+#                     "price": item.price,
+#                 }
+#                 for item in order.items
+#             ]
+#             orders_data.append({
+#                 "id": order.id,
+#                 "customer": "You", 
+#                 "items": items,
+#                 "total": order.total_cost,
+#                 "status": "Completed" if order.status else "Pending",
+#                 "timestamp": order.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+#             })
 
-        return jsonify({"orders": orders_data}), 200
+#         return jsonify({"orders": orders_data}), 200
 
-    except Exception as e:
-        return jsonify({"message": f"Unexpected error: {str(e)}"}), 500
+#     except Exception as e:
+#         return jsonify({"message": f"Unexpected error: {str(e)}"}), 500
     
-
 @app.route('/api/restaurant/orders', methods=['GET'])
 @jwt_required()
 def get_restaurant_orders():
-    restaurant_id = get_jwt_identity()  # Assuming JWT contains the restaurant ID
-
     try:
-        # Fetch recent orders for the restaurant
-        orders = Order.query.filter_by(restaurant_id=restaurant_id).order_by(Order.timestamp.desc()).all()
-        if not orders:
-            return jsonify({"message": "No orders found for this restaurant"}), 404
+        restaurant_id = get_jwt_identity()
 
-        # Format orders and their items
-        orders_data = []
-        for order in orders:
-            items = [
-                {
-                    "name": item.dish.name,  # Assuming `dish` relationship is set up in the model
-                    "quantity": item.quantity,
-                    "price": item.price,
-                }
-                for item in order.items
-            ]
-            orders_data.append({
-                "id": order.id,
-                "customer_id": order.user_id,  # Include customer information if necessary
-                "items": items,
-                "total": order.total_cost,
-                "status": "Completed" if order.status else "Pending",
-                "timestamp": order.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-            })
+        orders = Order.query.filter_by(restaurant_id=restaurant_id).order_by(Order.timestamp.desc()).all()
+
+        if not orders:
+            return jsonify({"message": "No orders found for this restaurant."}), 404
+
+        orders_data = [order.to_dict() for order in orders]
 
         return jsonify({"orders": orders_data}), 200
-
     except Exception as e:
-        print(e)
-        return jsonify({"message": f"Unexpected error: {str(e)}"}), 500
+        return jsonify({"message": f"An error occurred: {str(e)}"}), 500
 
 
 @app.route('/api/restaurant/orders/<int:order_id>', methods=['PUT'])
 @jwt_required()
 def update_order_status(order_id):
-    restaurant_id = get_jwt_identity()
-
     try:
-        # Fetch the order to update
+        restaurant_id = get_jwt_identity() 
+
+       
         order = Order.query.filter_by(id=order_id, restaurant_id=restaurant_id).first()
+
+        print(order)
+
         if not order:
-            return jsonify({"message": "Order not found"}), 404
+            return jsonify({"message": "Order not found or not authorized to update."}), 404
 
-        # Update order status
         data = request.get_json()
-        new_status = data.get("status", None)
-        if new_status not in ["Pending", "Completed"]:
-            return jsonify({"message": "Invalid status provided"}), 400
+        new_status = data.get("status")
+        print(new_status)
+        if new_status not in [True, False]:
+            return jsonify({"message": "Invalid status. Must be 'Pending' or 'Completed'."}), 400
 
-        order.status = True if new_status == "Completed" else False
+        order.status = True if new_status == True else False
         db.session.commit()
 
-        return jsonify({"message": "Order status updated successfully"}), 200
-
+        return jsonify({"message": "Order status updated successfully."}), 200
     except Exception as e:
-        print(e)
-        return jsonify({"message": f"Unexpected error: {str(e)}"}), 500
+        return jsonify({"message": f"An error occurred: {str(e)}"}), 500
