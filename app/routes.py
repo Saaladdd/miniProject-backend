@@ -996,3 +996,104 @@ def serve_image(filename):
         return send_file("..\\"+filename)
     except FileNotFoundError:
         return jsonify({'error': 'File not found'}), 404
+    
+
+
+@app.route('/api/orders', methods=['GET'])
+@jwt_required()
+def get_user_orders():
+    user_id = get_jwt_identity()
+
+    try:
+        orders = Order.query.filter_by(user_id=user_id).all()
+        if not orders:
+            return jsonify({"message": "No orders found"}), 404
+
+        orders_data = []
+        for order in orders:
+            items = [
+                {
+                    "name": item.dish.name, 
+                    "quantity": item.quantity,
+                    "price": item.price,
+                }
+                for item in order.items
+            ]
+            orders_data.append({
+                "id": order.id,
+                "customer": "You", 
+                "items": items,
+                "total": order.total_cost,
+                "status": "Completed" if order.status else "Pending",
+                "timestamp": order.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+            })
+
+        return jsonify({"orders": orders_data}), 200
+
+    except Exception as e:
+        return jsonify({"message": f"Unexpected error: {str(e)}"}), 500
+    
+
+@app.route('/api/restaurant/orders', methods=['GET'])
+@jwt_required()
+def get_restaurant_orders():
+    restaurant_id = get_jwt_identity()  # Assuming JWT contains the restaurant ID
+
+    try:
+        # Fetch recent orders for the restaurant
+        orders = Order.query.filter_by(restaurant_id=restaurant_id).order_by(Order.timestamp.desc()).all()
+        if not orders:
+            return jsonify({"message": "No orders found for this restaurant"}), 404
+
+        # Format orders and their items
+        orders_data = []
+        for order in orders:
+            items = [
+                {
+                    "name": item.dish.name,  # Assuming `dish` relationship is set up in the model
+                    "quantity": item.quantity,
+                    "price": item.price,
+                }
+                for item in order.items
+            ]
+            orders_data.append({
+                "id": order.id,
+                "customer_id": order.user_id,  # Include customer information if necessary
+                "items": items,
+                "total": order.total_cost,
+                "status": "Completed" if order.status else "Pending",
+                "timestamp": order.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+            })
+
+        return jsonify({"orders": orders_data}), 200
+
+    except Exception as e:
+        print(e)
+        return jsonify({"message": f"Unexpected error: {str(e)}"}), 500
+
+
+@app.route('/api/restaurant/orders/<int:order_id>', methods=['PUT'])
+@jwt_required()
+def update_order_status(order_id):
+    restaurant_id = get_jwt_identity()
+
+    try:
+        # Fetch the order to update
+        order = Order.query.filter_by(id=order_id, restaurant_id=restaurant_id).first()
+        if not order:
+            return jsonify({"message": "Order not found"}), 404
+
+        # Update order status
+        data = request.get_json()
+        new_status = data.get("status", None)
+        if new_status not in ["Pending", "Completed"]:
+            return jsonify({"message": "Invalid status provided"}), 400
+
+        order.status = True if new_status == "Completed" else False
+        db.session.commit()
+
+        return jsonify({"message": "Order status updated successfully"}), 200
+
+    except Exception as e:
+        print(e)
+        return jsonify({"message": f"Unexpected error: {str(e)}"}), 500
