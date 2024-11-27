@@ -753,8 +753,7 @@ def get_cart(session_id):
         cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
         print(cart)
         status =Order.query.filter_by(session_id=session_id, user_id=user_id).first().get_status()
-        print(status)
-        if not cart or not status:
+        if not (cart or status):
             return jsonify({"message": "Cart not found \n Start a new session"}), 404
 
         cart_details = cart.to_dict()
@@ -793,15 +792,15 @@ def update_cart(session_id):
         return jsonify({'message': "Item updated successfully"}), 200
     return jsonify({'message': "error"}),500
 
-@app.route('/api/<int:session_id>/delete_from_cart/<int:dish_id>', methods=['DELETE'])
+@app.route('/api/<int:session_id>/delete_cart_item', methods=['POST'])
 @jwt_required()
-def delete_from_cart(session_id,dish_id):
+def delete_from_cart(session_id):
     user_id = get_jwt_identity()
-    
+    data = request.json
+    dish_id = data.get('id')
     cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
     if not cart:
-        return jsonify({"message": "Cart not found"}), 404
-    
+        return jsonify({"message": "Cart not found"}), 404    
     try:
         if not dish_id:
             return jsonify({"message": "Dish ID not provided"}), 400
@@ -1097,3 +1096,28 @@ def get_restaurant_orders():
 #         return jsonify({"message": "Order status updated successfully."}), 200
 #     except Exception as e:
 #         return jsonify({"message": f"An error occurred: {str(e)}"}), 500
+
+@app.route('/api/get_restId_from_sessionId/<int:session_id>', methods=['GET'])
+@jwt_required()
+def get_restId_from_sessionId(session_id):
+    user_id = get_jwt_identity()
+    order = Order.query.filter_by(session_id=session_id, user_id=user_id).first()
+    print(order)
+    if not order:
+        return jsonify({"message": "Order not found"}), 404
+    return jsonify({"rest_id": order.restaurant_id}), 200
+
+@app.route('/api/get_cart_quantity/<int:session_id>', methods=['GET'])
+@jwt_required()
+def get_cart_items(session_id):
+    user_id = get_jwt_identity()
+    if session_id:
+        cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
+        if not cart:
+            return jsonify({"quantity": 0}), 200
+        quantity = 0
+        cart_details = cart.to_dict()
+        for item in cart_details['items']:
+            quantity += item['quantity']
+        return jsonify({"quantity": quantity}), 200
+    return jsonify({"quantity": 0}), 200
