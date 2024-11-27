@@ -1018,6 +1018,32 @@ def serve_image(filename):
         return jsonify({'error': 'File not found'}), 404
     
 
+@app.route('/api/get_restId_from_sessionId/<int:session_id>', methods=['GET'])
+@jwt_required()
+def get_restId_from_sessionId(session_id):
+    user_id = get_jwt_identity()
+    order = Order.query.filter_by(session_id=session_id, user_id=user_id).first()
+    if not order:
+        return jsonify({"message": "Order not found"}), 404
+    return jsonify({"rest_id": order.restaurant_id}), 200
+
+
+@app.route('/api/get_cart_quantity/<int:session_id>', methods=['GET'])
+@jwt_required()
+def get_cart_items(session_id):
+    user_id = get_jwt_identity()
+    if session_id:
+        cart = Cart.query.filter_by(session_id=session_id, user_id=user_id).first()
+        if not cart:
+            return jsonify({"quantity": 0}), 200
+        quantity = 0
+        cart_details = cart.to_dict()
+        for item in cart_details['items']:
+            quantity += item['quantity']
+        return jsonify({"quantity": quantity}), 200
+    return jsonify({"quantity": 0}), 200
+    
+
 
 # @app.route('/api/orders', methods=['GET'])
 # @jwt_required()
